@@ -45,9 +45,23 @@ These files establish the planned frontend organization and do not represent com
 
 ### Technology
 
+The backend is built using Python with Flask. Database access uses raw SQL via `psycopg2` (no ORM), per the project's Specifications.
+
 ### Structure
 
+The initial backend structure is organized into three primary areas, mirroring the frontend's separation of concerns:
+
+- `routes/` - Flask route/blueprint definitions, one file per resource
+- `services/` - business logic that isn't just data access
+- `models/` - data-access functions per table, written as raw SQL queries rather than ORM models
+- `db.py` - PostgreSQL connection handling
+- `tests/` - pytest suite, mirroring the structure above
+
+These directories are currently empty aside from placeholder `__init__.py` files and do not represent completed features, matching the frontend skeleton's scope.
+
 ### API
+
+MVP endpoints (`auth`, `sets`, `cards`, `reviews`) will be built first, matching the MVP scope in the project proposal and the frontend's initial page set. Feedback (GitHub API integration) and Notes/Derivation are proposal features but are explicitly excluded from MVP per the project proposal's MVP section, so their routes and services will be added after the MVP milestone, not as part of this skeleton. A `/health` endpoint currently exists as a placeholder to confirm the Flask app runs.
 
 ---
 
@@ -55,11 +69,17 @@ These files establish the planned frontend organization and do not represent com
 
 ### Technology
 
+PostgreSQL, hosted on Render alongside the backend, accessed via `psycopg2` rather than an ORM.
+
 ### Initial Data Model
+
+MVP tables, per the project proposal: `users`, `study_sets`, `cards`, `review_state`, `review_logs`. Two additional tables — `feedback_limits` and `notes` — are part of the full proposal scope but support post-MVP features, so their schemas will be implemented after the MVP milestone. Schema definitions for the MVP tables will be added once implementation of the data layer begins.
 
 ---
 
 ## 4. Authentication and Authorization
+
+Email/password authentication, with passwords hashed using `bcrypt`. Authorization is enforced at the query layer: users can only read/write their own sets, cards, and notes, and only public sets are visible outside their owner, per the project's functional requirements.
 
 ---
 
@@ -94,5 +114,14 @@ project/
 │   └── vite.config.js
 │
 ├── backend/
+│   ├── src/
+│   │   ├── routes/
+│   │   ├── services/
+│   │   ├── models/
+│   │   ├── app.py
+│   │   └── db.py
+│   ├── tests/
+│   ├── requirements.txt
+│   └── README.md
 │
 └── architecture.md
