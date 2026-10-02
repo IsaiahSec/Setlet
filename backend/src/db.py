@@ -8,4 +8,4 @@ import os
 
 
 def get_connection():
-    raise NotImplementedError("DB connection setup pending schema implementation")
+    raise NotImplementedError("DB connection setup pending schema implementation")  # pragma: no cover

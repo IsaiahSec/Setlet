@@ -91,10 +91,20 @@ Specific endpoints, request and response structures, and other integration detai
 
 ---
 
-## 6. Current Project Skeleton
+## 6. CI/CD
+
+GitHub Actions runs on every pull request targeting `main`. The `backend-tests` job installs the dependencies in `backend/requirements.txt` and runs the pytest suite with an 80% coverage gate on `backend/src`. The `frontend-tests` job installs the frontend dependencies and runs the Vitest and React Testing Library suite. Both jobs must pass before a pull request can be merged.
+
+---
+
+## 7. Current Project Skeleton
 
 ```text
 project/
+├── .github/
+│   └── workflows/
+│       └── test.yml
+│
 ├── frontend/
 │   ├── src/
 │   │   ├── components/
