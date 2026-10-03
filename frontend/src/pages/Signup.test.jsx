@@ -1,6 +1,7 @@
-import { render, screen, cleanup } from "@testing-library/react";
+import { render, screen, cleanup, fireEvent, waitFor } from "@testing-library/react";
 import { afterEach, describe, test, expect, vi } from "vitest";
 import Signup from "./Signup";
+import { signup } from "../services/api";
 
 // fake api
 vi.mock("../services/api", () => ({
@@ -49,4 +50,32 @@ describe("Signup page", () => {
         const inputs = document.querySelectorAll("input");
         expect(inputs.length).toBe(3);
     });
+    test("submits signup credentials", async () => {
+    render(<Signup />);
+
+    const inputs = document.querySelectorAll("input");
+
+    fireEvent.change(inputs[0], {
+        target: { value: "test@example.com" },
+    });
+
+    fireEvent.change(inputs[1], {
+        target: { value: "password123" },
+    });
+
+    fireEvent.change(inputs[2], {
+        target: { value: "password123" },
+    });
+
+    fireEvent.click(
+        screen.getByRole("button", { name: "Create Account" })
+    );
+
+    await waitFor(() => {
+        expect(signup).toHaveBeenCalledWith(
+            "test@example.com",
+            "password123"
+        );
+    });
+});
 });

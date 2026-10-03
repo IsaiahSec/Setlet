@@ -1,10 +1,11 @@
-import { render, screen, cleanup } from "@testing-library/react";
+import { render, screen, cleanup, fireEvent, waitFor } from "@testing-library/react";
 import { afterEach, describe, test, expect, vi } from "vitest";
 import Login from "./Login";
+import { login } from "../services/api";
 
 // fake api
 vi.mock("../services/api", () => ({
-    login: vi.fn(),
+    login: vi.fn().mockResolvedValue({ token: "fake-token" }),
     setToken: vi.fn(),
 }));
 
@@ -48,4 +49,25 @@ describe("Login page", () => {
         const inputs = document.querySelectorAll("input");
         expect(inputs.length).toBe(2);
     });
+    test("submits login credentials", async () => {
+    render(<Login />);
+    const inputs = document.querySelectorAll("input");
+
+    fireEvent.change(inputs[0], {
+    target: { value: "test@example.com" },
+    });
+
+    fireEvent.change(inputs[1], {
+    target: { value: "password123" },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Login" }));
+
+    await waitFor(() => {
+        expect(login).toHaveBeenCalledWith(
+            "test@example.com",
+            "password123"
+        );
+    });
+});
 });
