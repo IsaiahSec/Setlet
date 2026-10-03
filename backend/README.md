@@ -11,6 +11,13 @@ source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
+## Configuration
+
+Set these environment variables (a local `.env` file is loaded automatically):
+
+- `DATABASE_URL` - PostgreSQL connection string (e.g. Render's Postgres URL)
+- `SECRET_KEY` - secret used to sign auth tokens
+
 ## Run (development)
 
 ```bash

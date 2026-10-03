@@ -73,13 +73,17 @@ PostgreSQL, hosted on Render alongside the backend, accessed via `psycopg2` rath
 
 ### Initial Data Model
 
-MVP tables, per the project proposal: `users`, `study_sets`, `cards`, `review_state`, `review_logs`. Two additional tables — `feedback_limits` and `notes` — are part of the full proposal scope but support post-MVP features, so their schemas will be implemented after the MVP milestone. Schema definitions for the MVP tables will be added once implementation of the data layer begins.
+MVP tables, per the project proposal: `users`, `study_sets`, `cards`, `review_state`, `review_logs`. Two additional tables — `feedback_limits` and `notes` — are part of the full proposal scope but support post-MVP features, so their schemas will be implemented after the MVP milestone. `db.py` connects using the `DATABASE_URL` environment variable and creates tables on startup if they do not exist. Currently implemented:
+
+- `users` - `id` (serial primary key), `email` (unique), `password_hash` (bcrypt), `created_at`
+
+Schema definitions for the remaining MVP tables will be added as the data layer is built out.
 
 ---
 
 ## 4. Authentication and Authorization
 
-Email/password authentication, with passwords hashed using `bcrypt`. Authorization is enforced at the query layer: users can only read/write their own sets, cards, and notes, and only public sets are visible outside their owner, per the project's functional requirements.
+Email/password authentication, with passwords hashed using `bcrypt`. `POST /auth/signup` creates a user (`201` with the user id, `409` on duplicate email, `400` on invalid input). `POST /auth/login` returns a signed token (`itsdangerous`, keyed by the `SECRET_KEY` environment variable, valid 7 days) in the response body; an unknown email or wrong password both return `401` with the same error message. Clients send the token back as `Authorization: Bearer <token>` rather than using a session cookie, since the frontend and backend are on separate origins. Authorization is enforced at the query layer: users can only read/write their own sets, cards, and notes, and only public sets are visible outside their owner, per the project's functional requirements.
 
 ---
 
@@ -126,8 +130,11 @@ project/
 ├── backend/
 │   ├── src/
 │   │   ├── routes/
+│   │   │   └── auth.py
 │   │   ├── services/
+│   │   │   └── auth.py
 │   │   ├── models/
+│   │   │   └── users.py
 │   │   ├── app.py
 │   │   └── db.py
 │   ├── tests/
