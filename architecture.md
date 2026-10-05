@@ -93,6 +93,8 @@ The frontend will communicate with the backend through an API.
 
 Specific endpoints, request and response structures, and other integration details will be added as the backend structure is developed.
 
+The backend enables CORS for the origin configured by the `FRONTEND_ORIGIN` environment variable (defaulting to `http://localhost:5173`). Set it to `https://setlet.vercel.app` in production. Requests may include the `Authorization` and `Content-Type` headers.
+
 ---
 
 ## 6. CI/CD

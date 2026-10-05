@@ -17,6 +17,7 @@ Set these environment variables (a local `.env` file is loaded automatically):
 
 - `DATABASE_URL` - PostgreSQL connection string (e.g. Render's Postgres URL)
 - `SECRET_KEY` - secret used to sign auth tokens
+- `FRONTEND_ORIGIN` - allowed frontend origin for CORS (defaults to `http://localhost:5173`; set to `https://setlet.vercel.app` in production)
 
 ## Run (development)
 
