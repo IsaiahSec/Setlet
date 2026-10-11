@@ -57,7 +57,7 @@ The initial backend structure is organized into three primary areas, mirroring t
 - `db.py` - PostgreSQL connection handling
 - `tests/` - pytest suite, mirroring the structure above
 
-These directories are currently empty aside from placeholder `__init__.py` files and do not represent completed features, matching the frontend skeleton's scope.
+The backend includes authentication and owner-scoped study-set endpoints, with table-specific raw SQL models and service validation.
 
 ### API
 
@@ -76,6 +76,7 @@ PostgreSQL, hosted on Render alongside the backend, accessed via `psycopg2` rath
 MVP tables, per the project proposal: `users`, `study_sets`, `cards`, `review_state`, `review_logs`. Two additional tables — `feedback_limits` and `notes` — are part of the full proposal scope but support post-MVP features, so their schemas will be implemented after the MVP milestone. `db.py` connects using the `DATABASE_URL` environment variable and creates tables on startup if they do not exist. Currently implemented:
 
 - `users` - `id` (serial primary key), `email` (unique), `password_hash` (bcrypt), `created_at`
+- `study_sets` - `id`, `owner_id` (references `users`), `title`, `description`, `visibility`, `created_at`, `updated_at`
 
 Schema definitions for the remaining MVP tables will be added as the data layer is built out.
 
@@ -133,14 +134,18 @@ project/
 │   ├── src/
 │   │   ├── routes/
 │   │   │   ├── auth.py
-│   │   │   └── decorators.py
+│   │   │   ├── decorators.py
+│   │   │   └── sets.py
 │   │   ├── services/
-│   │   │   └── auth.py
+│   │   │   ├── auth.py
+│   │   │   └── study_sets.py
 │   │   ├── models/
-│   │   │   └── users.py
+│   │   │   ├── users.py
+│   │   │   └── study_sets.py
 │   │   ├── app.py
 │   │   └── db.py
 │   ├── tests/
+│   │   ├── test_study_sets_postgres.py
 │   ├── requirements.txt
 │   └── README.md
 │

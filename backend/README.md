@@ -54,6 +54,11 @@ refuse to connect unless the database name ends in `_test`.
 - `POST /auth/signup` - register with an email and password; returns the new user ID.
 - `POST /auth/login` - authenticate with an email and password; returns a bearer token.
 - `GET /auth/me` - return the authenticated user's ID and email. Send the token using an Authorization bearer header.
+- `POST /sets` - create a private study set.
+- `GET /sets` - list the authenticated user's study sets.
+- `GET /sets/<id>` - read one of the authenticated user's study sets.
+- `PATCH /sets/<id>` - rename or update the description of an owned study set.
+- `DELETE /sets/<id>` - delete an owned study set.
 
 ## Structure
 
