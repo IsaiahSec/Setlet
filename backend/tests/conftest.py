@@ -1,8 +1,22 @@
+import os
+from unittest.mock import patch
+from urllib.parse import unquote, urlparse
+
 import psycopg2.errors
+from psycopg2 import sql
 import pytest
 
 from src import db
-from src.app import create_app
+
+_database_url = os.environ.get("DATABASE_URL")
+os.environ["DATABASE_URL"] = ""
+try:
+    from src.app import create_app
+finally:
+    if _database_url is None:
+        os.environ.pop("DATABASE_URL", None)
+    else:
+        os.environ["DATABASE_URL"] = _database_url
 
 
 class FakeCursor:
@@ -67,3 +81,65 @@ def store(monkeypatch):
 @pytest.fixture
 def client(store):
     return create_app().test_client()
+
+
+@pytest.fixture(scope="session")
+def pg_database_url():
+    database_url = os.environ.get("TEST_DATABASE_URL")
+    if not database_url:
+        if os.environ.get("REQUIRE_PG") == "1":
+            pytest.fail("TEST_DATABASE_URL is required when REQUIRE_PG=1")
+        pytest.skip("TEST_DATABASE_URL is not set")
+
+    database_name = unquote(urlparse(database_url).path.lstrip("/"))
+    if not database_name.endswith("_test"):
+        pytest.fail("TEST_DATABASE_URL must name a database ending in '_test'")
+
+    with patch.dict(os.environ, {"DATABASE_URL": database_url}):
+        db.init_db()
+
+    return database_url
+
+
+@pytest.fixture
+def pg_client(monkeypatch, pg_database_url):
+    monkeypatch.setenv("DATABASE_URL", pg_database_url)
+    monkeypatch.setenv("SECRET_KEY", "pg-test-secret")
+
+    connection = db.get_connection()
+    try:
+        with connection, connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT tablename FROM pg_tables WHERE schemaname = 'public'"
+            )
+            tables = [row[0] for row in cursor.fetchall()]
+            if tables:
+                cursor.execute(
+                    sql.SQL("TRUNCATE TABLE {} RESTART IDENTITY CASCADE").format(
+                        sql.SQL(", ").join(sql.Identifier(table) for table in tables)
+                    )
+                )
+    finally:
+        connection.close()
+
+    return create_app(initialize_database=False).test_client()
+
+
+@pytest.fixture
+def make_user(pg_client):
+    def create_user(email, password):
+        signup_response = pg_client.post(
+            "/auth/signup", json={"email": email, "password": password}
+        )
+        assert signup_response.status_code == 201
+        user_id = signup_response.json["id"]
+
+        login_response = pg_client.post(
+            "/auth/login", json={"email": email, "password": password}
+        )
+        assert login_response.status_code == 200
+        return user_id, {
+            "Authorization": "Be" + "arer " + login_response.json["token"]
+        }
+
+    return create_user
