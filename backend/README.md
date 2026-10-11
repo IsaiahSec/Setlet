@@ -31,6 +31,12 @@ flask --app src.app run --debug
 pytest
 ```
 
+## Endpoints
+
+- `POST /auth/signup` - register with an email and password; returns the new user ID.
+- `POST /auth/login` - authenticate with an email and password; returns a bearer token.
+- `GET /auth/me` - return the authenticated user's ID and email. Send the token using an Authorization bearer header.
+
 ## Structure
 
 - `src/routes/` - Flask route/blueprint definitions (one file per resource: sets, cards, auth, etc.)

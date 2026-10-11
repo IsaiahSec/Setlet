@@ -132,7 +132,8 @@ project/
 ├── backend/
 │   ├── src/
 │   │   ├── routes/
-│   │   │   └── auth.py
+│   │   │   ├── auth.py
+│   │   │   └── decorators.py
 │   │   ├── services/
 │   │   │   └── auth.py
 │   │   ├── models/
