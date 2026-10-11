@@ -31,6 +31,24 @@ flask --app src.app run --debug
 pytest
 ```
 
+## Running tests against PostgreSQL
+
+Create a dedicated test database:
+
+```bash
+createdb setlet_test
+```
+
+Set `TEST_DATABASE_URL` to point to that database before running pytest. For
+example, in PowerShell:
+
+```powershell
+$env:TEST_DATABASE_URL = "postgresql://<user>:<password>@localhost:5432/setlet_test"
+```
+
+The PostgreSQL-backed smoke tests only run when `TEST_DATABASE_URL` is set and
+refuse to connect unless the database name ends in `_test`.
+
 ## Endpoints
 
 - `POST /auth/signup` - register with an email and password; returns the new user ID.
