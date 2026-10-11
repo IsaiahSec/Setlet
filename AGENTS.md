@@ -43,6 +43,7 @@ npm test
 
 - Stay scoped to the assigned Issue. Do not modify files unrelated to the task (e.g. a backend task should not touch `frontend/`, and vice versa).
 - Until the MVP is built, open pull requests into `mvp`. A maintainer opens the single `mvp` -> `main` pull request. Reference issues as `Refs #N`, not `Closes #N`.
+- Before starting, branch from the latest `mvp` (not `main`). The code from earlier sub-issues is only there. Do not re-create changes that already exist on `mvp`; read them and build on them.
 - Squash merge only.
 - One teammate approval is required before merge, plus passing status checks (`backend-tests`, `frontend-tests`).
 - Follow existing naming and structure conventions already established in `backend/src/` and `frontend/src/` (see `architecture.md` Section 6 for the current file tree) rather than introducing a new pattern.
