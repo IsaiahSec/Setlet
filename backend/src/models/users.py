@@ -40,3 +40,20 @@ def get_user_by_email(email):
     if row is None:
         return None
     return {"id": row[0], "email": row[1], "password_hash": row[2]}
+
+
+def get_user_by_id(user_id):
+    """Return a dict with id and email, or None if not found."""
+    conn = get_connection()
+    try:
+        with conn, conn.cursor() as cur:
+            cur.execute(
+                "SELECT id, email FROM users WHERE id = %s",
+                (user_id,),
+            )
+            row = cur.fetchone()
+    finally:
+        conn.close()
+    if row is None:
+        return None
+    return {"id": row[0], "email": row[1]}

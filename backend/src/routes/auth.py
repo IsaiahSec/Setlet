@@ -1,5 +1,7 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, g, jsonify, request
 
+from src.models import users
+from src.routes.decorators import require_auth
 from src.services import auth
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
@@ -29,3 +31,10 @@ def login():
     except auth.InvalidCredentialsError:
         return jsonify({"error": "Invalid email or password"}), 401
     return jsonify({"token": token}), 200
+
+
+@auth_bp.get("/me")
+@require_auth
+def me():
+    user = users.get_user_by_id(g.user_id)
+    return jsonify({"id": user["id"], "email": user["email"]}), 200

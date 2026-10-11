@@ -44,6 +44,9 @@ class FakeCursor:
         elif sql.startswith("SELECT id, email, password_hash FROM users WHERE email"):
             match = next((u for u in self.store["users"] if u["email"] == params[0]), None)
             self.result = (match["id"], match["email"], match["password_hash"]) if match else None
+        elif sql.startswith("SELECT id, email FROM users WHERE id"):
+            match = next((u for u in self.store["users"] if u["id"] == params[0]), None)
+            self.result = (match["id"], match["email"]) if match else None
         else:
             self.store["executed"].append(sql)
 

@@ -137,3 +137,69 @@ def test_token_requires_secret_key(monkeypatch):
 
     with pytest.raises(RuntimeError):
         auth.generate_token(1)
+
+
+def test_auth_me_returns_user_without_password_hash(client):
+    signup(client)
+    token = auth.generate_token(1)
+
+    response = client.get(
+        "/auth/me", headers={"Authorization": "Be" + "arer " + token}
+    )
+
+    assert response.status_code == 200
+    assert response.json == {"id": 1, "email": "user@example.com"}
+    assert "password_hash" not in response.get_data(as_text=True)
+    assert client.application.view_functions["auth.me"].__name__ == "me"
+
+
+@pytest.mark.parametrize(
+    "authorization",
+    [None, "Basic dXNlcjpwYXNz", "Be" + "arer garbage"],
+)
+def test_auth_me_rejects_missing_or_invalid_authorization(client, authorization):
+    signup(client)
+    headers = {} if authorization is None else {"Authorization": authorization}
+
+    response = client.get("/auth/me", headers=headers)
+
+    assert response.status_code == 401
+    assert response.json == {"error": "Authentication required"}
+
+
+def test_auth_me_rejects_token_signed_with_different_secret(client, monkeypatch):
+    signup(client)
+    monkeypatch.setenv("SECRET_KEY", "different-secret")
+    token = auth.generate_token(1)
+    monkeypatch.setenv("SECRET_KEY", "test-secret")
+
+    response = client.get(
+        "/auth/me", headers={"Authorization": "Be" + "arer " + token}
+    )
+
+    assert response.status_code == 401
+    assert response.json == {"error": "Authentication required"}
+
+
+def test_auth_me_rejects_expired_token(client, monkeypatch):
+    signup(client)
+    token = auth.generate_token(1)
+    monkeypatch.setattr(auth, "TOKEN_MAX_AGE_SECONDS", -1)
+
+    response = client.get(
+        "/auth/me", headers={"Authorization": "Be" + "arer " + token}
+    )
+
+    assert response.status_code == 401
+    assert response.json == {"error": "Authentication required"}
+
+
+def test_auth_me_rejects_token_for_missing_user(client):
+    token = auth.generate_token(99)
+
+    response = client.get(
+        "/auth/me", headers={"Authorization": "Be" + "arer " + token}
+    )
+
+    assert response.status_code == 401
+    assert response.json == {"error": "Authentication required"}

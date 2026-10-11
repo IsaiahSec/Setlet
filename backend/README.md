@@ -49,6 +49,12 @@ $env:TEST_DATABASE_URL = "postgresql://<user>:<password>@localhost:5432/setlet_t
 The PostgreSQL-backed smoke tests only run when `TEST_DATABASE_URL` is set and
 refuse to connect unless the database name ends in `_test`.
 
+## Endpoints
+
+- `POST /auth/signup` - register with an email and password; returns the new user ID.
+- `POST /auth/login` - authenticate with an email and password; returns a bearer token.
+- `GET /auth/me` - return the authenticated user's ID and email. Send the token using an Authorization bearer header.
+
 ## Structure
 
 - `src/routes/` - Flask route/blueprint definitions (one file per resource: sets, cards, auth, etc.)
