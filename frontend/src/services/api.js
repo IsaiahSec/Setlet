@@ -2,7 +2,7 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
 
 // this function sends requests to the backend
-async function request(endpoint, options) {
+export async function request(endpoint, options) {
     // get the token from local storage
     const token = localStorage.getItem("token");
 
@@ -17,8 +17,11 @@ async function request(endpoint, options) {
     }
 
     // if the user is logged in, add the token
-    if (token) {
-        headers["Authorization"] = "Bearer " + token;
+    const isAuthRequest =
+    endpoint === "/auth/login" || endpoint === "/auth/signup";
+
+    if (token && !isAuthRequest) {
+    headers["Authorization"] = "Bearer " + token;
     }
 
     const response = await fetch(API_BASE_URL + endpoint, {
@@ -38,7 +41,12 @@ async function request(endpoint, options) {
 
     // if something went wrong, throw an error
     if (!response.ok) {
-        throw new Error(data.error || data.message || "Something went wrong");
+        if (response.status === 401 && !isAuthRequest && token) {
+            clearToken();
+            window.location.replace("/login");
+       }
+
+    throw new Error(data.error || data.message || "Something went wrong");
     }
 
     return data;
