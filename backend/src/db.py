@@ -17,6 +17,18 @@ CREATE TABLE IF NOT EXISTS users (
 )
 """
 
+STUDY_SETS_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS study_sets (
+    id SERIAL PRIMARY KEY,
+    owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    visibility TEXT NOT NULL DEFAULT 'private' CHECK (visibility IN ('private', 'public')),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+)
+"""
+
 
 def get_connection():
     database_url = os.environ.get("DATABASE_URL")
@@ -31,5 +43,10 @@ def init_db():
     try:
         with conn, conn.cursor() as cur:
             cur.execute(USERS_TABLE_SQL)
+            cur.execute(STUDY_SETS_TABLE_SQL)
+            cur.execute(
+                "CREATE INDEX IF NOT EXISTS study_sets_owner_id_idx "
+                "ON study_sets(owner_id)"
+            )
     finally:
         conn.close()
