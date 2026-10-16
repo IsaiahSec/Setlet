@@ -1,0 +1,165 @@
+
+/* My Sets page */
+
+.mysets-page {
+  min-height: 100vh;
+  background-color: #f7f5fa;
+  padding: 40px 20px;
+  font-family: Arial, sans-serif;
+}
+
+.mysets-container {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.mysets-header {
+  margin-bottom: 28px;
+}
+
+.mysets-header h1 {
+  color: #4f2683;
+  font-size: 32px;
+  margin-bottom: 8px;
+}
+
+.mysets-header p {
+  color: #666;
+  font-size: 16px;
+}
+
+.mysets-panel {
+  background: white;
+  padding: 24px;
+  border: 1px solid #e5e0eb;
+  border-radius: 10px;
+  margin-bottom: 24px;
+}
+
+.mysets-panel h2 {
+  color: #4f2683;
+  font-size: 21px;
+  margin-top: 0;
+}
+
+.mysets-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mysets-form label {
+  font-weight: bold;
+  color: #333;
+}
+
+.mysets-form input,
+.mysets-form textarea {
+  padding: 12px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font: inherit;
+  width: 100%;
+}
+
+.mysets-form input:focus,
+.mysets-form textarea:focus {
+  outline: 2px solid #4f2683;
+  border-color: #4f2683;
+}
+
+.mysets-form button,
+.mysets-card button {
+  background-color: #4f2683;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 10px 16px;
+  cursor: pointer;
+  font: inherit;
+}
+
+.mysets-form button {
+  align-self: flex-start;
+  margin-top: 8px;
+}
+
+.mysets-form button:hover,
+.mysets-card button:hover {
+  background-color: #391b61;
+}
+
+.mysets-form button:disabled,
+.mysets-card button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.mysets-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.mysets-card {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 20px;
+  background-color: #fff;
+}
+
+.mysets-card h3 {
+  margin-top: 0;
+}
+
+.mysets-card a {
+  color: #4f2683;
+  text-decoration: none;
+}
+
+.mysets-card a:hover {
+  text-decoration: underline;
+}
+
+.mysets-card p {
+  color: #555;
+}
+
+.mysets-count {
+  font-size: 14px;
+}
+
+.mysets-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.mysets-actions span {
+  font-size: 14px;
+}
+
+.mysets-error {
+  color: #a32121;
+  background-color: #fff0f0;
+  border: 1px solid #e7b8b8;
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 20px;
+}
+
+@media (max-width: 600px) {
+  .mysets-page {
+    padding: 24px 12px;
+  }
+
+  .mysets-header h1 {
+    font-size: 26px;
+  }
+
+  .mysets-panel {
+    padding: 16px;
+  }
+}
