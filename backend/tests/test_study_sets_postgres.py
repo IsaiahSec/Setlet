@@ -1,3 +1,4 @@
+import psycopg2
 import pytest
 
 from src.db import get_connection
@@ -37,6 +38,8 @@ def test_postgres_set_crud(pg_client, make_user):
     read = pg_client.get(f"/sets/{set_id}", headers=headers)
     assert read.status_code == 200
     assert read.json["owner_id"] == user_id
+    assert read.json["owner_name"] == "set-owner"
+    assert read.json["is_owner"] is True
     assert {key: read.json[key] for key in created.json} == created.json
     assert read.json["cards"] == []
 
@@ -62,7 +65,10 @@ def test_postgres_list_only_returns_owners_sets_most_recent_first(pg_client, mak
     _, other_headers = make_user("list-other@example.com", "correct horse")
     first = create_set(pg_client, owner_headers, "First").json
     second = create_set(pg_client, owner_headers, "Second").json
-    create_set(pg_client, other_headers, "Other")
+    other_set = create_set(pg_client, other_headers, "Other").json
+    pg_client.patch(
+        f"/sets/{other_set['id']}", headers=other_headers, json={"visibility": "public"}
+    )
 
     updated = pg_client.patch(
         f"/sets/{first['id']}", headers=owner_headers, json={"description": "updated"}
@@ -99,6 +105,106 @@ def test_postgres_non_owner_cannot_read_update_or_delete_set(pg_client, make_use
     assert unchanged.json["title"] == "Private set"
     assert unchanged.json["owner_id"] == owner_id
     assert unchanged.json["visibility"] == "private"
+
+
+@pytest.mark.parametrize(
+    ("visibility", "viewer", "expected_status"),
+    [
+        ("private", "owner", 200),
+        ("private", "other", 404),
+        ("public", "owner", 200),
+        ("public", "other", 200),
+    ],
+)
+def test_postgres_set_visibility_read_matrix(
+    pg_client, make_user, visibility, viewer, expected_status
+):
+    owner_id, owner_headers = make_user("matrix-owner@example.com", "correct horse")
+    _, other_headers = make_user("matrix-other@example.com", "correct horse")
+    study_set = create_set(pg_client, owner_headers, "Visibility matrix").json
+    if visibility == "public":
+        changed = pg_client.patch(
+            f"/sets/{study_set['id']}",
+            headers=owner_headers,
+            json={"visibility": "public"},
+        )
+        assert changed.status_code == 200
+
+    headers = owner_headers if viewer == "owner" else other_headers
+    response = pg_client.get(f"/sets/{study_set['id']}", headers=headers)
+
+    assert response.status_code == expected_status
+    if expected_status == 404:
+        assert response.json == {"error": "Set not found"}
+    else:
+        assert response.json["owner_id"] == owner_id
+        assert response.json["owner_name"] == "matrix-owner"
+        assert response.json["is_owner"] is (viewer == "owner")
+
+
+def test_postgres_owner_can_switch_visibility_and_other_user_access_changes(
+    pg_client, make_user
+):
+    _, owner_headers = make_user("switch-owner@example.com", "correct horse")
+    _, other_headers = make_user("switch-other@example.com", "correct horse")
+    study_set = create_set(pg_client, owner_headers, "Switch visibility").json
+    set_url = f"/sets/{study_set['id']}"
+
+    assert pg_client.get(set_url, headers=other_headers).status_code == 404
+    made_public = pg_client.patch(
+        set_url, headers=owner_headers, json={"visibility": "public"}
+    )
+    assert made_public.status_code == 200
+    assert made_public.json["visibility"] == "public"
+    assert pg_client.get(set_url, headers=other_headers).status_code == 200
+    owner_list = pg_client.get("/sets", headers=owner_headers)
+    assert owner_list.json["sets"][0]["visibility"] == "public"
+
+    made_private = pg_client.patch(
+        set_url, headers=owner_headers, json={"visibility": "private"}
+    )
+    assert made_private.status_code == 200
+    assert made_private.json["visibility"] == "private"
+    owner_list = pg_client.get("/sets", headers=owner_headers)
+    assert owner_list.json["sets"][0]["visibility"] == "private"
+    hidden = pg_client.get(set_url, headers=other_headers)
+    assert hidden.status_code == 404
+    assert hidden.json == {"error": "Set not found"}
+
+
+@pytest.mark.parametrize("visibility", ["PUBLIC", None, 1, "", False])
+def test_postgres_invalid_visibility_is_rejected_without_changing_set(
+    pg_client, make_user, visibility
+):
+    _, headers = make_user("invalid-visibility@example.com", "correct horse")
+    study_set = create_set(pg_client, headers, "Invalid visibility").json
+
+    response = pg_client.patch(
+        f"/sets/{study_set['id']}",
+        headers=headers,
+        json={"visibility": visibility},
+    )
+
+    assert response.status_code == 400
+    unchanged = pg_client.get(f"/sets/{study_set['id']}", headers=headers)
+    assert unchanged.status_code == 200
+    assert unchanged.json["visibility"] == "private"
+
+
+def test_postgres_visibility_check_rejects_direct_invalid_insert(pg_client, make_user):
+    owner_id, _ = make_user("check-visibility@example.com", "correct horse")
+    conn = get_connection()
+    try:
+        with pytest.raises(psycopg2.errors.CheckViolation):
+            with conn, conn.cursor() as cursor:
+                cursor.execute(
+                    "INSERT INTO study_sets "
+                    "(owner_id, title, description, visibility) "
+                    "VALUES (%s, %s, %s, %s)",
+                    (owner_id, "Invalid direct insert", "", "friends"),
+                )
+    finally:
+        conn.close()
 
 
 @pytest.mark.parametrize(
@@ -145,7 +251,7 @@ def test_postgres_invalid_descriptions_return_400(pg_client, make_user, descript
     assert "error" in response.json
 
 
-def test_postgres_patch_ignores_owner_and_visibility(pg_client, make_user):
+def test_postgres_patch_ignores_owner_id_and_accepts_visibility(pg_client, make_user):
     owner_id, owner_headers = make_user("allowlist-owner@example.com", "correct horse")
     other_id, _ = make_user("allowlist-other@example.com", "correct horse")
     created = create_set(pg_client, owner_headers).json
@@ -159,7 +265,7 @@ def test_postgres_patch_ignores_owner_and_visibility(pg_client, make_user):
     assert response.status_code == 200
     assert response.json["title"] == "Renamed"
     assert response.json["owner_id"] == owner_id
-    assert response.json["visibility"] == "private"
+    assert response.json["visibility"] == "public"
 
 
 def test_postgres_set_validation_rejects_non_object_body(pg_client, make_user):
@@ -272,6 +378,57 @@ def test_postgres_non_owner_cannot_manipulate_cards(pg_client, make_user):
 
     unchanged = pg_client.get(f"/sets/{set_id}", headers=owner_headers)
     assert unchanged.json["title"] == "Private cards"
+    assert unchanged.json["cards"] == [
+        {"id": card["id"], "front": "Original front", "back": "Original back"}
+    ]
+
+
+def test_postgres_non_owner_cannot_mutate_public_set_or_cards(pg_client, make_user):
+    _, owner_headers = make_user("public-card-owner@example.com", "correct horse")
+    _, other_headers = make_user("public-card-other@example.com", "correct horse")
+    study_set = create_set(pg_client, owner_headers, "Public cards").json
+    set_id = study_set["id"]
+    card = pg_client.post(
+        f"/sets/{set_id}/cards",
+        headers=owner_headers,
+        json={"front": "Original front", "back": "Original back"},
+    ).json
+    made_public = pg_client.patch(
+        f"/sets/{set_id}", headers=owner_headers, json={"visibility": "public"}
+    )
+    assert made_public.status_code == 200
+
+    update_set = pg_client.patch(
+        f"/sets/{set_id}",
+        headers=other_headers,
+        json={"title": "Hijacked", "visibility": "private"},
+    )
+    delete_set = pg_client.delete(f"/sets/{set_id}", headers=other_headers)
+    create_card = pg_client.post(
+        f"/sets/{set_id}/cards",
+        headers=other_headers,
+        json={"front": "Intruder", "back": "Intruder"},
+    )
+    update_card = pg_client.patch(
+        f"/sets/{set_id}/cards/{card['id']}",
+        headers=other_headers,
+        json={"front": "Changed"},
+    )
+    delete_card = pg_client.delete(
+        f"/sets/{set_id}/cards/{card['id']}", headers=other_headers
+    )
+
+    for response in (update_set, delete_set):
+        assert response.status_code == 404
+        assert response.json == {"error": "Set not found"}
+    for response in (create_card, update_card, delete_card):
+        assert response.status_code == 404
+        assert response.json == {"error": "Not found"}
+
+    unchanged = pg_client.get(f"/sets/{set_id}", headers=owner_headers)
+    assert unchanged.status_code == 200
+    assert unchanged.json["title"] == "Public cards"
+    assert unchanged.json["visibility"] == "public"
     assert unchanged.json["cards"] == [
         {"id": card["id"], "front": "Original front", "back": "Original back"}
     ]

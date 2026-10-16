@@ -56,15 +56,16 @@ refuse to connect unless the database name ends in `_test`.
 - `GET /auth/me` - return the authenticated user's ID and email. Send the token using an Authorization bearer header.
 - `POST /sets` - create a private study set.
 - `GET /sets` - list the authenticated user's study sets.
-- `GET /sets/<id>` - read one of the authenticated user's study sets.
-- `PATCH /sets/<id>` - rename or update the description of an owned study set.
+- `GET /sets/<id>` - read one of the authenticated user's study sets or a public set; includes cards, `owner_id`, `owner_name`, and `is_owner`.
+- `PATCH /sets/<id>` - rename, update the description, or set visibility to `private` or `public` on an owned study set.
 - `DELETE /sets/<id>` - delete an owned study set.
 - `POST /sets/<id>/cards` - add a card to an owned set (`front` and `back`, each 1–2,000 trimmed characters).
 - `PATCH /sets/<id>/cards/<card_id>` - update a card's `front` and/or `back`.
 - `DELETE /sets/<id>/cards/<card_id>` - delete a card from an owned set.
 
-`GET /sets/<id>` includes its cards ordered by ID. `GET /sets` includes a
-`card_count` for each set. Deleting a set cascades to its cards.
+`GET /sets/<id>` includes its cards ordered by ID. Non-owners can read public
+sets but cannot update them or their cards. `GET /sets` remains owner-only and
+includes a `card_count` for each set. Deleting a set cascades to its cards.
 
 ## Structure
 

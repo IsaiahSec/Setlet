@@ -47,4 +47,9 @@ def update_set(owner_id, set_id, data):
         fields["title"] = _validate_title(data["title"])
     if "description" in data:
         fields["description"] = _validate_description(data["description"])
+    if "visibility" in data:
+        visibility = data["visibility"]
+        if not isinstance(visibility, str) or visibility not in ("private", "public"):
+            raise ValidationError("Visibility must be 'private' or 'public'")
+        fields["visibility"] = visibility
     return study_sets.update_set(owner_id, set_id, fields)
