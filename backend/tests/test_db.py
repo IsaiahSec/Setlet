@@ -21,4 +21,9 @@ def test_init_db_creates_users_table(store):
 
     assert any("CREATE TABLE IF NOT EXISTS users" in sql for sql in store["executed"])
     assert any("CREATE TABLE IF NOT EXISTS study_sets" in sql for sql in store["executed"])
+    assert any("CREATE TABLE IF NOT EXISTS cards" in sql for sql in store["executed"])
     assert any("CREATE INDEX IF NOT EXISTS study_sets_owner_id_idx" in sql for sql in store["executed"])
+    assert any(
+        "CREATE INDEX IF NOT EXISTS cards_set_id_idx" in sql
+        for sql in store["executed"]
+    )
