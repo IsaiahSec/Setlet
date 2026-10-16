@@ -60,11 +60,8 @@ function MySets() {
   try {
     await deleteSet(id);
 
-    console.log("Deleting ID:", id);
-
-setSets((previousSets) => {
-  console.log("Current sets:", previousSets);
-  return previousSets.filter((item) => item.id !== id);
+    setSets((previousSets) => {
+    return previousSets.filter((item) => item.id !== id);
 });
 
     setConfirmId(null);
