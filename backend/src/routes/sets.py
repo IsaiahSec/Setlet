@@ -29,7 +29,7 @@ def list_sets():
 @sets_bp.get("/<int:set_id>")
 @require_auth
 def get_set(set_id):
-    result = study_sets.get_set_visibility_to(set_id, g.user_id)
+    result = study_sets.get_set_for_viewer(set_id, g.user_id)
     if result is None:
         return jsonify({"error": "Set not found"}), 404
     result["is_owner"] = result["owner_id"] == g.user_id

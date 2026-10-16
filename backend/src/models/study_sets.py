@@ -88,7 +88,7 @@ def get_set(owner_id, set_id):
         conn.close()
 
 
-def get_set_visibility_to(set_id, viewer_id):
+def get_set_for_viewer(set_id, viewer_id):
     """Return a visible study set, including its owner name and cards, or None."""
     conn = get_connection()
     try:
@@ -109,11 +109,6 @@ def get_set_visibility_to(set_id, viewer_id):
             return _include_cards(cur, set_id, study_set)
     finally:
         conn.close()
-
-
-def get_set_visible_to(set_id, viewer_id):
-    """Alias retained for callers using the shorter visibility helper name."""
-    return get_set_visibility_to(set_id, viewer_id)
 
 
 def update_set(owner_id, set_id, fields):
