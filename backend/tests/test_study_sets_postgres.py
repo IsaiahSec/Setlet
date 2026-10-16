@@ -1,5 +1,7 @@
 import pytest
 
+from src.db import get_connection
+
 
 def create_set(client, headers, title="Biology", description=""):
     return client.post(
@@ -30,12 +32,13 @@ def test_postgres_set_crud(pg_client, make_user):
     set_id = created.json["id"]
     listed = pg_client.get("/sets", headers=headers)
     assert listed.status_code == 200
-    assert listed.json == {"sets": [created.json]}
+    assert listed.json == {"sets": [{**created.json, "card_count": 0}]}
 
     read = pg_client.get(f"/sets/{set_id}", headers=headers)
     assert read.status_code == 200
     assert read.json["owner_id"] == user_id
     assert {key: read.json[key] for key in created.json} == created.json
+    assert read.json["cards"] == []
 
     updated = pg_client.patch(
         f"/sets/{set_id}",
@@ -181,3 +184,207 @@ def test_postgres_set_endpoints_require_authentication(pg_client):
     assert pg_client.get("/sets/1").status_code == 401
     assert pg_client.patch("/sets/1", json={"title": "No token"}).status_code == 401
     assert pg_client.delete("/sets/1").status_code == 401
+
+
+def test_postgres_card_crud_and_card_counts(pg_client, make_user):
+    _, headers = make_user("card-crud@example.com", "correct horse")
+    study_set = create_set(pg_client, headers, "Cards").json
+    set_id = study_set["id"]
+
+    first = pg_client.post(
+        f"/sets/{set_id}/cards",
+        headers=headers,
+        json={"front": "  Question one ", "back": " Answer one  "},
+    )
+    second = pg_client.post(
+        f"/sets/{set_id}/cards",
+        headers=headers,
+        json={"front": "Question two", "back": "Answer two"},
+    )
+
+    assert first.status_code == 201
+    assert first.json == {
+        "id": first.json["id"],
+        "set_id": set_id,
+        "front": "Question one",
+        "back": "Answer one",
+    }
+    assert second.status_code == 201
+
+    listed = pg_client.get("/sets", headers=headers)
+    assert listed.json["sets"][0]["card_count"] == 2
+    read = pg_client.get(f"/sets/{set_id}", headers=headers)
+    assert read.json["cards"] == [
+        {"id": first.json["id"], "front": "Question one", "back": "Answer one"},
+        {"id": second.json["id"], "front": "Question two", "back": "Answer two"},
+    ]
+
+    updated = pg_client.patch(
+        f"/sets/{set_id}/cards/{first.json['id']}",
+        headers=headers,
+        json={"front": "  Updated question ", "set_id": 999, "id": 999},
+    )
+    assert updated.status_code == 200
+    assert updated.json == {
+        "id": first.json["id"],
+        "set_id": set_id,
+        "front": "Updated question",
+        "back": "Answer one",
+    }
+
+    deleted = pg_client.delete(
+        f"/sets/{set_id}/cards/{second.json['id']}", headers=headers
+    )
+    assert deleted.status_code == 204
+    assert deleted.get_data() == b""
+    listed_after_delete = pg_client.get("/sets", headers=headers)
+    assert listed_after_delete.json["sets"][0]["card_count"] == 1
+
+
+def test_postgres_non_owner_cannot_manipulate_cards(pg_client, make_user):
+    _, owner_headers = make_user("card-owner@example.com", "correct horse")
+    _, other_headers = make_user("card-other@example.com", "correct horse")
+    study_set = create_set(pg_client, owner_headers, "Private cards").json
+    set_id = study_set["id"]
+    card = pg_client.post(
+        f"/sets/{set_id}/cards",
+        headers=owner_headers,
+        json={"front": "Original front", "back": "Original back"},
+    ).json
+
+    create = pg_client.post(
+        f"/sets/{set_id}/cards",
+        headers=other_headers,
+        json={"front": "Intruder", "back": "Intruder"},
+    )
+    update = pg_client.patch(
+        f"/sets/{set_id}/cards/{card['id']}",
+        headers=other_headers,
+        json={"front": "Changed"},
+    )
+    delete = pg_client.delete(
+        f"/sets/{set_id}/cards/{card['id']}", headers=other_headers
+    )
+
+    for response in (create, update, delete):
+        assert response.status_code == 404
+        assert response.json == {"error": "Not found"}
+
+    unchanged = pg_client.get(f"/sets/{set_id}", headers=owner_headers)
+    assert unchanged.json["title"] == "Private cards"
+    assert unchanged.json["cards"] == [
+        {"id": card["id"], "front": "Original front", "back": "Original back"}
+    ]
+
+
+def test_postgres_card_id_from_another_set_is_not_found(pg_client, make_user):
+    _, headers = make_user("wrong-card-set@example.com", "correct horse")
+    first_set = create_set(pg_client, headers, "First").json
+    second_set = create_set(pg_client, headers, "Second").json
+    card = pg_client.post(
+        f"/sets/{first_set['id']}/cards",
+        headers=headers,
+        json={"front": "Front", "back": "Back"},
+    ).json
+
+    update = pg_client.patch(
+        f"/sets/{second_set['id']}/cards/{card['id']}",
+        headers=headers,
+        json={"front": "Changed"},
+    )
+    delete = pg_client.delete(
+        f"/sets/{second_set['id']}/cards/{card['id']}", headers=headers
+    )
+
+    for response in (update, delete):
+        assert response.status_code == 404
+        assert response.json == {"error": "Not found"}
+    assert pg_client.get(f"/sets/{first_set['id']}", headers=headers).json["cards"] == [
+        {"id": card["id"], "front": "Front", "back": "Back"}
+    ]
+
+
+def test_postgres_deleting_set_cascades_to_cards(pg_client, make_user):
+    _, headers = make_user("card-cascade@example.com", "correct horse")
+    study_set = create_set(pg_client, headers, "Cascade").json
+    card = pg_client.post(
+        f"/sets/{study_set['id']}/cards",
+        headers=headers,
+        json={"front": "Front", "back": "Back"},
+    ).json
+
+    response = pg_client.delete(f"/sets/{study_set['id']}", headers=headers)
+
+    assert response.status_code == 204
+    conn = get_connection()
+    try:
+        with conn, conn.cursor() as cursor:
+            cursor.execute("SELECT id FROM cards WHERE id = %s", (card["id"],))
+            assert cursor.fetchone() is None
+    finally:
+        conn.close()
+
+
+@pytest.mark.parametrize(
+    ("payload", "method"),
+    [
+        ({"back": "Back"}, "post"),
+        ({"front": "Front"}, "post"),
+        ({"front": " ", "back": "Back"}, "post"),
+        ({"front": "Front", "back": " "}, "post"),
+        ({"front": "x" * 2001, "back": "Back"}, "post"),
+        ({"front": "Front", "back": "x" * 2001}, "post"),
+        ({"front": 123, "back": "Back"}, "post"),
+        ({"front": "Front", "back": 123}, "post"),
+        ({"back": " "}, "patch"),
+        ({"front": None}, "patch"),
+    ],
+)
+def test_postgres_invalid_card_fields_return_400(pg_client, make_user, payload, method):
+    _, headers = make_user("invalid-card@example.com", "correct horse")
+    study_set = create_set(pg_client, headers, "Validation").json
+    url = f"/sets/{study_set['id']}/cards"
+    if method == "patch":
+        card = pg_client.post(
+            url, headers=headers, json={"front": "Front", "back": "Back"}
+        ).json
+        url += f"/{card['id']}"
+
+    response = getattr(pg_client, method)(url, headers=headers, json=payload)
+
+    assert response.status_code == 400
+    assert "error" in response.json
+
+
+def test_postgres_card_endpoints_require_authentication(pg_client):
+    assert (
+        pg_client.post("/sets/1/cards", json={"front": "Q", "back": "A"}).status_code
+        == 401
+    )
+    assert (
+        pg_client.patch("/sets/1/cards/1", json={"front": "Q"}).status_code == 401
+    )
+    assert pg_client.delete("/sets/1/cards/1").status_code == 401
+
+
+def test_postgres_card_endpoints_reject_non_object_bodies(pg_client, make_user):
+    _, headers = make_user("card-body@example.com", "correct horse")
+    study_set = create_set(pg_client, headers, "Body validation").json
+
+    create = pg_client.post(
+        f"/sets/{study_set['id']}/cards",
+        headers=headers,
+        data="not json",
+        content_type="text/plain",
+    )
+    update = pg_client.patch(
+        f"/sets/{study_set['id']}/cards/1",
+        headers=headers,
+        data="not json",
+        content_type="text/plain",
+    )
+
+    assert create.status_code == 400
+    assert create.json == {"error": "Request body must be a JSON object"}
+    assert update.status_code == 400
+    assert update.json == {"error": "Request body must be a JSON object"}

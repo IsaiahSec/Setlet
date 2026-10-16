@@ -77,8 +77,11 @@ MVP tables, per the project proposal: `users`, `study_sets`, `cards`, `review_st
 
 - `users` - `id` (serial primary key), `email` (unique), `password_hash` (bcrypt), `created_at`
 - `study_sets` - `id`, `owner_id` (references `users`), `title`, `description`, `visibility`, `created_at`, `updated_at`
+- `cards` - `id`, `set_id` (references `study_sets` with `ON DELETE CASCADE`), `front`, `back`, `created_at`, `updated_at`; indexed by `set_id`
 
-Schema definitions for the remaining MVP tables will be added as the data layer is built out.
+Schema definitions for `review_state` and `review_logs` will be added as the data layer is built out.
+
+The authenticated set API supports creating, updating, and deleting cards under `/sets/<set_id>/cards`. Only the set owner can manipulate its cards. Set reads include cards ordered by ID, and set lists include a `card_count`.
 
 ---
 

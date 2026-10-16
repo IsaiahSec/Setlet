@@ -29,6 +29,17 @@ CREATE TABLE IF NOT EXISTS study_sets (
 )
 """
 
+CARDS_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS cards (
+    id SERIAL PRIMARY KEY,
+    set_id INTEGER NOT NULL REFERENCES study_sets(id) ON DELETE CASCADE,
+    front TEXT NOT NULL,
+    back TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+)
+"""
+
 
 def get_connection():
     database_url = os.environ.get("DATABASE_URL")
@@ -44,9 +55,13 @@ def init_db():
         with conn, conn.cursor() as cur:
             cur.execute(USERS_TABLE_SQL)
             cur.execute(STUDY_SETS_TABLE_SQL)
+            cur.execute(CARDS_TABLE_SQL)
             cur.execute(
                 "CREATE INDEX IF NOT EXISTS study_sets_owner_id_idx "
                 "ON study_sets(owner_id)"
+            )
+            cur.execute(
+                "CREATE INDEX IF NOT EXISTS cards_set_id_idx ON cards(set_id)"
             )
     finally:
         conn.close()

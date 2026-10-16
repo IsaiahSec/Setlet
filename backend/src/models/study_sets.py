@@ -40,11 +40,16 @@ def list_sets(owner_id):
     try:
         with conn, conn.cursor() as cur:
             cur.execute(
-                f"SELECT {_SET_FIELDS} FROM study_sets "
+                f"SELECT {_SET_FIELDS}, "
+                "(SELECT COUNT(*) FROM cards WHERE cards.set_id = study_sets.id) "
+                "AS card_count FROM study_sets "
                 "WHERE owner_id = %s ORDER BY updated_at DESC, id DESC",
                 (owner_id,),
             )
-            return [_set_from_row(row) for row in cur.fetchall()]
+            return [
+                {**_set_from_row(row[:6]), "card_count": row[6]}
+                for row in cur.fetchall()
+            ]
     finally:
         conn.close()
 
@@ -59,7 +64,19 @@ def get_set(owner_id, set_id):
                 "WHERE id = %s AND owner_id = %s",
                 (set_id, owner_id),
             )
-            return _set_from_row(cur.fetchone(), include_owner=True)
+            study_set = _set_from_row(cur.fetchone(), include_owner=True)
+            if study_set is None:
+                return None
+            cur.execute(
+                "SELECT id, front, back FROM cards "
+                "WHERE set_id = %s ORDER BY id ASC",
+                (set_id,),
+            )
+            study_set["cards"] = [
+                dict(zip(("id", "front", "back"), row))
+                for row in cur.fetchall()
+            ]
+            return study_set
     finally:
         conn.close()
 
