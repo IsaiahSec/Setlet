@@ -1,0 +1,153 @@
+
+/* Set Editor page */
+
+.seteditor-page {
+  min-height: 100vh;
+  background-color: #f7f5fa;
+  padding: 40px 20px;
+  font-family: Arial, sans-serif;
+}
+
+.seteditor-container {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.seteditor-header {
+  margin-bottom: 28px;
+}
+
+.seteditor-header h1 {
+  color: #4f2683;
+  font-size: 32px;
+  margin-bottom: 8px;
+}
+
+.seteditor-header p {
+  color: #666;
+  font-size: 16px;
+}
+
+.seteditor-back {
+  display: inline-block;
+  color: #4f2683;
+  text-decoration: none;
+  margin-bottom: 20px;
+}
+
+.seteditor-back:hover {
+  text-decoration: underline;
+}
+
+.seteditor-panel {
+  background: white;
+  padding: 24px;
+  border: 1px solid #e5e0eb;
+  border-radius: 10px;
+  margin-bottom: 24px;
+}
+
+.seteditor-panel h2 {
+  color: #4f2683;
+  font-size: 21px;
+  margin-top: 0;
+}
+
+.seteditor-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.seteditor-form label {
+  font-weight: bold;
+  color: #333;
+}
+
+.seteditor-form input,
+.seteditor-form textarea {
+  box-sizing: border-box;
+  padding: 12px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font: inherit;
+  width: 100%;
+}
+
+.seteditor-form input:focus,
+.seteditor-form textarea:focus {
+  outline: 2px solid #4f2683;
+  border-color: #4f2683;
+}
+
+.seteditor-page button {
+  background-color: #4f2683;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 10px 16px;
+  cursor: pointer;
+  font: inherit;
+}
+
+.seteditor-page button:hover {
+  background-color: #391b61;
+}
+
+.seteditor-page button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.seteditor-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.seteditor-card {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 20px;
+  background: white;
+  margin-top: 16px;
+}
+
+.seteditor-card h3 {
+  margin-top: 0;
+  color: #333;
+}
+
+.seteditor-error {
+  color: #a32121;
+  background-color: #fff0f0;
+  border: 1px solid #e7b8b8;
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 20px;
+}
+
+.seteditor-success {
+  color: #27613a;
+  background-color: #effaf1;
+  border: 1px solid #b9dec3;
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 20px;
+}
+
+@media (max-width: 600px) {
+  .seteditor-page {
+    padding: 24px 12px;
+  }
+
+  .seteditor-header h1 {
+    font-size: 26px;
+  }
+
+  .seteditor-panel {
+    padding: 16px;
+  }
+}
