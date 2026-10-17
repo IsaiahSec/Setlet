@@ -119,7 +119,7 @@ export function updateSet(id, data) {
 }
 
 // add a new card to a study set
-export function addCard(setId, front, back) {
+export function createCard(setId, front, back) {
     return request(`/sets/${setId}/cards`, {
         method: "POST",
         body: JSON.stringify({ front, back }),

@@ -197,13 +197,14 @@ function SetEditor() {
   return (
     <div className="seteditor-page">
       <div className="seteditor-container">
-        <Link to="/my-sets" className="seteditor-back">
+        <Link to="/mysets" className="seteditor-back">
           ← Back to My Sets
         </Link>
 
         <header className="seteditor-header">
           <h1>Set Editor</h1>
           <p>Edit your study set and manage its flashcards.</p>
+          <div className="seteditor-visibility" data-testid="visibility-slot" />
         </header>
 
         {error && (

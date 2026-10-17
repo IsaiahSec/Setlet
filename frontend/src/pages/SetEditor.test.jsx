@@ -1,6 +1,12 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import SetEditor from "./SetEditor";
 import * as api from "../services/api";
@@ -35,6 +41,7 @@ function renderEditor() {
     </MemoryRouter>
   );
 }
+
 afterEach(() => {
   cleanup();
 });
@@ -72,7 +79,9 @@ describe("Set Editor", () => {
   it("loads the study set and its cards", async () => {
     renderEditor();
 
-    expect(screen.getByText("Loading study set...")).toBeTruthy();
+    expect(
+      screen.getByText("Loading study set...")
+    ).toBeTruthy();
 
     expect(
       await screen.findByDisplayValue("Biology Chapter 1")
@@ -110,7 +119,9 @@ describe("Set Editor", () => {
     });
 
     expect(
-      await screen.findByText("Study set updated successfully.")
+      await screen.findByText(
+        "Study set updated successfully."
+      )
     ).toBeTruthy();
   });
 
@@ -119,17 +130,23 @@ describe("Set Editor", () => {
 
     await screen.findByText("Cards (1)");
 
-    fireEvent.change(screen.getByLabelText("Front", {
-      selector: "#new-front",
-    }), {
-      target: { value: "What is DNA?" },
-    });
+    fireEvent.change(
+      screen.getByLabelText("Front", {
+        selector: "#new-front",
+      }),
+      {
+        target: { value: "What is DNA?" },
+      }
+    );
 
-    fireEvent.change(screen.getByLabelText("Back", {
-      selector: "#new-back",
-    }), {
-      target: { value: "Genetic material." },
-    });
+    fireEvent.change(
+      screen.getByLabelText("Back", {
+        selector: "#new-back",
+      }),
+      {
+        target: { value: "Genetic material." },
+      }
+    );
 
     fireEvent.click(
       screen.getByRole("button", { name: "Create Card" })
@@ -143,7 +160,9 @@ describe("Set Editor", () => {
       );
     });
 
-    expect(await screen.findByText("Cards (2)")).toBeTruthy();
+    expect(
+      await screen.findByText("Cards (2)")
+    ).toBeTruthy();
   });
 
   it("updates an existing flashcard", async () => {
@@ -193,7 +212,9 @@ describe("Set Editor", () => {
         expect(api.deleteCard).toHaveBeenCalledWith("2", 1);
       });
 
-      expect(await screen.findByText("Cards (0)")).toBeTruthy();
+      expect(
+        await screen.findByText("Cards (0)")
+      ).toBeTruthy();
     } finally {
       vi.unstubAllGlobals();
     }
@@ -216,7 +237,7 @@ describe("Set Editor", () => {
 
   it("shows an error when the study set is not found (404)", async () => {
     api.getSet.mockRejectedValue(
-      new Error("Study set not found")
+      new Error("Set not found")
     );
 
     renderEditor();
@@ -225,8 +246,14 @@ describe("Set Editor", () => {
       await screen.findByRole("alert")
     ).toHaveProperty(
       "textContent",
-      "Study set not found"
+      "Set not found"
     );
+
+    expect(
+      screen
+        .getByRole("link", { name: /Back to My Sets/i })
+        .getAttribute("href")
+    ).toBe("/mysets");
   });
 
   it("shows a validation error when updating a study set fails", async () => {
@@ -249,5 +276,4 @@ describe("Set Editor", () => {
       "Title is required"
     );
   });
-
 });
