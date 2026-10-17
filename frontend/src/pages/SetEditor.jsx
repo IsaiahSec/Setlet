@@ -4,7 +4,7 @@ import { Link, useParams } from "react-router-dom";
 import {
   getSet,
   updateSet,
-  addCard,
+  createCard,
   updateCard,
   deleteCard,
 } from "../services/api";
@@ -101,7 +101,7 @@ function SetEditor() {
     setSaving(true);
 
     try {
-      const card = await addCard(
+      const card = await createCard(
         setId,
         newFront.trim(),
         newBack.trim()
@@ -295,7 +295,7 @@ function SetEditor() {
 
                 <div className="seteditor-actions">
                   <button type="submit" disabled={saving}>
-                    {saving ? "Saving..." : "Add Card"}
+                    {saving ? "Saving..." : "Create Card"}
                   </button>
                 </div>
               </form>

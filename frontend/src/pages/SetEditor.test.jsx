@@ -8,7 +8,7 @@ import * as api from "../services/api";
 vi.mock("../services/api", () => ({
   getSet: vi.fn(),
   updateSet: vi.fn(),
-  addCard: vi.fn(),
+  createCard: vi.fn(),
   updateCard: vi.fn(),
   deleteCard: vi.fn(),
 }));
@@ -53,7 +53,7 @@ beforeEach(() => {
     description: "Cells",
   });
 
-  api.addCard.mockResolvedValue({
+  api.createCard.mockResolvedValue({
     id: 3,
     front: "What is DNA?",
     back: "Genetic material.",
@@ -132,11 +132,11 @@ describe("Set Editor", () => {
     });
 
     fireEvent.click(
-      screen.getByRole("button", { name: "Add Card" })
+      screen.getByRole("button", { name: "Create Card" })
     );
 
     await waitFor(() => {
-      expect(api.addCard).toHaveBeenCalledWith(
+      expect(api.createCard).toHaveBeenCalledWith(
         "2",
         "What is DNA?",
         "Genetic material."
@@ -213,4 +213,41 @@ describe("Set Editor", () => {
       "Unable to load study set"
     );
   });
+
+  it("shows an error when the study set is not found (404)", async () => {
+    api.getSet.mockRejectedValue(
+      new Error("Study set not found")
+    );
+
+    renderEditor();
+
+    expect(
+      await screen.findByRole("alert")
+    ).toHaveProperty(
+      "textContent",
+      "Study set not found"
+    );
+  });
+
+  it("shows a validation error when updating a study set fails", async () => {
+    api.updateSet.mockRejectedValue(
+      new Error("Title is required")
+    );
+
+    renderEditor();
+
+    await screen.findByDisplayValue("Biology Chapter 1");
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Save Changes" })
+    );
+
+    expect(
+      await screen.findByRole("alert")
+    ).toHaveProperty(
+      "textContent",
+      "Title is required"
+    );
+  });
+
 });
