@@ -82,3 +82,26 @@ export function getToken() {
 export function clearToken() {
     localStorage.removeItem("token");
 }
+
+ // get the current user's study sets
+export function listSets() {
+  return request("/sets");
+}
+
+// create a new study set
+export function createSet(title, description = "") {
+  return request("/sets", {
+    method: "POST",
+    body: JSON.stringify({
+      title,
+      description,
+    }),
+  });
+}
+
+// delete a study set
+export function deleteSet(id) {
+  return request(`/sets/${id}`, {
+    method: "DELETE",
+  });
+}
