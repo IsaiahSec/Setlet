@@ -56,6 +56,7 @@ refuse to connect unless the database name ends in `_test`.
 - `GET /auth/me` - return the authenticated user's ID and email. Send the token using an Authorization bearer header.
 - `POST /sets` - create a private study set.
 - `GET /sets` - list the authenticated user's study sets.
+- `GET /sets/public?q=<text>&page=<n>&page_size=<n>` - search public study sets owned by other users, with pagination.
 - `GET /sets/<id>` - read one of the authenticated user's study sets or a public set; includes cards, `owner_id`, `owner_name`, and `is_owner`.
 - `PATCH /sets/<id>` - rename, update the description, or set visibility to `private` or `public` on an owned study set.
 - `DELETE /sets/<id>` - delete an owned study set.
@@ -66,6 +67,13 @@ refuse to connect unless the database name ends in `_test`.
 `GET /sets/<id>` includes its cards ordered by ID. Non-owners can read public
 sets but cannot update them or their cards. `GET /sets` remains owner-only and
 includes a `card_count` for each set. Deleting a set cascades to its cards.
+
+`GET /sets/public` requires authentication and returns only other users' public
+sets. Search is case-insensitive across titles and descriptions, matching all
+of up to five whitespace-separated terms. Pagination defaults to page 1 with
+20 results per page and supports page sizes up to 50. Results include a card
+count and the owner's name (the part of their email before `@`), but no cards
+or full email address.
 
 ## Structure
 

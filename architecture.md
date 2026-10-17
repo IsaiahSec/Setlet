@@ -59,6 +59,11 @@ The initial backend structure is organized into three primary areas, mirroring t
 
 The backend includes authentication and owner-scoped study-set mutations, with table-specific raw SQL models and service validation. Individual set reads are visible to the owner and to other users only when the set is public.
 
+Authenticated users can list other users' public sets with `GET /sets/public`,
+optionally searching titles and descriptions by keyword and paginating results.
+The response includes set metadata, card counts, and the owner's email prefix,
+but not card contents or full email addresses.
+
 ### API
 
 MVP endpoints (`auth`, `sets`, `cards`, `reviews`) will be built first, matching the MVP scope in the project proposal and the frontend's initial page set. Feedback (GitHub API integration) and Notes/Derivation are proposal features but are explicitly excluded from MVP per the project proposal's MVP section, so their routes and services will be added after the MVP milestone, not as part of this skeleton. A `/health` endpoint currently exists as a placeholder to confirm the Flask app runs.

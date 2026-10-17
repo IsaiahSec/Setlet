@@ -26,6 +26,21 @@ def list_sets():
     return jsonify({"sets": study_sets.list_sets(g.user_id)}), 200
 
 
+@sets_bp.get("/public")
+@require_auth
+def list_public_sets():
+    try:
+        result = study_sets_service.list_public_sets(
+            g.user_id,
+            request.args.get("q"),
+            request.args.get("page"),
+            request.args.get("page_size"),
+        )
+    except study_sets_service.ValidationError as error:
+        return jsonify({"error": error.message}), 400
+    return jsonify(result), 200
+
+
 @sets_bp.get("/<int:set_id>")
 @require_auth
 def get_set(set_id):
