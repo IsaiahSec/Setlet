@@ -57,7 +57,7 @@ The initial backend structure is organized into three primary areas, mirroring t
 - `db.py` - PostgreSQL connection handling
 - `tests/` - pytest suite, mirroring the structure above
 
-The backend includes authentication and owner-scoped study-set endpoints, with table-specific raw SQL models and service validation.
+The backend includes authentication and owner-scoped study-set mutations, with table-specific raw SQL models and service validation. Individual set reads are visible to the owner and to other users only when the set is public.
 
 ### API
 
@@ -81,7 +81,7 @@ MVP tables, per the project proposal: `users`, `study_sets`, `cards`, `review_st
 
 Schema definitions for `review_state` and `review_logs` will be added as the data layer is built out.
 
-The authenticated set API supports creating, updating, and deleting cards under `/sets/<set_id>/cards`. Only the set owner can manipulate its cards. Set reads include cards ordered by ID, and set lists include a `card_count`.
+The authenticated set API supports creating, updating, and deleting cards under `/sets/<set_id>/cards`. Only the set owner can manipulate sets and cards. Owners can switch set visibility between `private` and `public`; individual set reads include cards ordered by ID, the owner's name, and whether the viewer is the owner. Set lists remain owner-only and include a `card_count`.
 
 ---
 
