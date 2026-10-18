@@ -2,11 +2,20 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from src.services.scheduling import next_state
+from src.services.scheduling import (
+    DEFAULT_EASE_FACTOR,
+    DEFAULT_INTERVAL_DAYS,
+    DEFAULT_REPETITIONS,
+    next_state,
+)
 
 
 NOW = datetime(2026, 1, 2, 3, 4, 5, tzinfo=timezone.utc)
-DEFAULT_STATE = (2.5, 0, 0)
+DEFAULT_STATE = (
+    DEFAULT_EASE_FACTOR,
+    DEFAULT_INTERVAL_DAYS,
+    DEFAULT_REPETITIONS,
+)
 
 
 @pytest.mark.parametrize(

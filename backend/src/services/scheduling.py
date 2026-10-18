@@ -2,6 +2,11 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 
 
+DEFAULT_EASE_FACTOR = 2.5
+DEFAULT_INTERVAL_DAYS = 0
+DEFAULT_REPETITIONS = 0
+
+
 @dataclass(frozen=True)
 class ReviewState:
     ease_factor: float
