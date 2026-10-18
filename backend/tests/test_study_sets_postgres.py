@@ -12,6 +12,14 @@ def create_set(client, headers, title="Biology", description=""):
     )
 
 
+def make_set_public(client, headers, study_set):
+    response = client.patch(
+        f"/sets/{study_set['id']}", headers=headers, json={"visibility": "public"}
+    )
+    assert response.status_code == 200
+    return study_set
+
+
 def test_postgres_set_crud(pg_client, make_user):
     user_id, headers = make_user("set-owner@example.com", "correct horse")
 
@@ -545,3 +553,295 @@ def test_postgres_card_endpoints_reject_non_object_bodies(pg_client, make_user):
     assert create.json == {"error": "Request body must be a JSON object"}
     assert update.status_code == 400
     assert update.json == {"error": "Request body must be a JSON object"}
+
+
+def test_postgres_public_sets_exclude_private_and_owned_sets(pg_client, make_user):
+    owner_id, owner_headers = make_user("public-owner@example.com", "correct horse")
+    _, viewer_headers = make_user("public-viewer@example.com", "correct horse")
+    private_set = create_set(
+        pg_client, owner_headers, "Needle private", "needle description"
+    ).json
+    public_set = make_set_public(
+        pg_client,
+        owner_headers,
+        create_set(pg_client, owner_headers, "Needle public").json,
+    )
+    own_private_set = create_set(
+        pg_client, viewer_headers, "Needle my private"
+    ).json
+    own_public_set = make_set_public(
+        pg_client,
+        viewer_headers,
+        create_set(pg_client, viewer_headers, "Needle my public").json,
+    )
+
+    for query in ("", "?q=needle"):
+        response = pg_client.get(f"/sets/public{query}", headers=viewer_headers)
+        assert response.status_code == 200
+        result_ids = {item["id"] for item in response.json["sets"]}
+        assert result_ids == {public_set["id"]}
+        assert private_set["id"] not in result_ids
+        assert own_private_set["id"] not in result_ids
+        assert own_public_set["id"] not in result_ids
+
+    item = pg_client.get("/sets/public", headers=viewer_headers).json["sets"][0]
+    assert item["owner_id"] == owner_id
+
+
+def test_postgres_public_search_matches_title_description_and_all_terms(
+    pg_client, make_user
+):
+    _, owner_headers = make_user("search-owner@example.com", "correct horse")
+    _, viewer_headers = make_user("search-viewer@example.com", "correct horse")
+    matching = make_set_public(
+        pg_client,
+        owner_headers,
+        create_set(
+            pg_client, owner_headers, "CrImSoN sky", "quiet COmet"
+        ).json,
+    )
+    title_only = make_set_public(
+        pg_client,
+        owner_headers,
+        create_set(pg_client, owner_headers, "Crimson", "unrelated").json,
+    )
+    description_only = make_set_public(
+        pg_client,
+        owner_headers,
+        create_set(pg_client, owner_headers, "Comet", "unrelated").json,
+    )
+
+    response = pg_client.get(
+        "/sets/public?q=CRIMSON%20comet", headers=viewer_headers
+    )
+
+    assert response.status_code == 200
+    assert [item["id"] for item in response.json["sets"]] == [matching["id"]]
+    trimmed = pg_client.get(
+        "/sets/public?q=%20%20crimson%20%20", headers=viewer_headers
+    ).json
+    assert {item["id"] for item in trimmed["sets"]} == {
+        matching["id"],
+        title_only["id"],
+    }
+    for query, expected_ids in (
+        ("crimson", {matching["id"], title_only["id"]}),
+        ("quiet", {matching["id"]}),
+        ("comet", {matching["id"], description_only["id"]}),
+        ("unrelated", {title_only["id"], description_only["id"]}),
+    ):
+        result = pg_client.get(
+            f"/sets/public?q={query}", headers=viewer_headers
+        ).json
+        assert {item["id"] for item in result["sets"]} == expected_ids
+    assert description_only["id"] not in [
+        item["id"] for item in response.json["sets"]
+    ]
+
+
+def test_postgres_public_search_treats_like_characters_literally(
+    pg_client, make_user
+):
+    _, owner_headers = make_user("special-owner@example.com", "correct horse")
+    _, viewer_headers = make_user("special-viewer@example.com", "correct horse")
+    literal = make_set_public(
+        pg_client,
+        owner_headers,
+        create_set(pg_client, owner_headers, "100%_safe\\path").json,
+    )
+    description_literal = make_set_public(
+        pg_client,
+        owner_headers,
+        create_set(
+            pg_client, owner_headers, "Description match", "prefix 100%_safe\\path"
+        ).json,
+    )
+    wildcard_decoy = make_set_public(
+        pg_client,
+        owner_headers,
+        create_set(pg_client, owner_headers, "100xx_safe\\path").json,
+    )
+    underscore_decoy = make_set_public(
+        pg_client,
+        owner_headers,
+        create_set(pg_client, owner_headers, "100%xsafe\\path").json,
+    )
+
+    response = pg_client.get(
+        "/sets/public?q=100%25_safe%5Cpath", headers=viewer_headers
+    )
+    assert response.status_code == 200
+    assert response.status_code == 200
+    result_ids = {item["id"] for item in response.json["sets"]}
+    assert result_ids == {literal["id"], description_literal["id"]}
+    assert wildcard_decoy["id"] not in result_ids
+    assert underscore_decoy["id"] not in result_ids
+
+
+def test_postgres_public_search_uses_at_most_five_terms(pg_client, make_user):
+    _, owner_headers = make_user("five-terms-owner@example.com", "correct horse")
+    _, viewer_headers = make_user("five-terms-viewer@example.com", "correct horse")
+    study_set = make_set_public(
+        pg_client,
+        owner_headers,
+        create_set(pg_client, owner_headers, "one two three four five").json,
+    )
+
+    response = pg_client.get(
+        "/sets/public?q=one%20two%20three%20four%20five%20missing",
+        headers=viewer_headers,
+    )
+
+    assert response.status_code == 200
+    assert [item["id"] for item in response.json["sets"]] == [study_set["id"]]
+
+
+def test_postgres_public_search_paginates_and_orders_results(pg_client, make_user):
+    _, owner_headers = make_user("pagination-owner@example.com", "correct horse")
+    _, viewer_headers = make_user("pagination-viewer@example.com", "correct horse")
+    sets = [
+        make_set_public(
+            pg_client,
+            owner_headers,
+            create_set(pg_client, owner_headers, f"Page result {index}").json,
+        )
+        for index in range(3)
+    ]
+    connection = get_connection()
+    try:
+        with connection, connection.cursor() as cursor:
+            cursor.execute(
+                "UPDATE study_sets SET updated_at = CASE id "
+                "WHEN %s THEN TIMESTAMP '2025-01-01 00:00:00' "
+                "WHEN %s THEN TIMESTAMP '2025-01-03 00:00:00' "
+                "WHEN %s THEN TIMESTAMP '2025-01-02 00:00:00' END "
+                "WHERE id IN (%s, %s, %s)",
+                (
+                    sets[0]["id"],
+                    sets[1]["id"],
+                    sets[2]["id"],
+                    *(study_set["id"] for study_set in sets),
+                ),
+            )
+    finally:
+        connection.close()
+
+    first_page = pg_client.get(
+        "/sets/public?page=1&page_size=1", headers=viewer_headers
+    ).json
+    second_page = pg_client.get(
+        "/sets/public?page=2&page_size=1", headers=viewer_headers
+    ).json
+    last_page = pg_client.get(
+        "/sets/public?page=3&page_size=1", headers=viewer_headers
+    ).json
+    past_last_page = pg_client.get(
+        "/sets/public?page=4&page_size=1", headers=viewer_headers
+    ).json
+    largest_page = pg_client.get(
+        "/sets/public?page=1&page_size=50", headers=viewer_headers
+    ).json
+    default_page = pg_client.get("/sets/public", headers=viewer_headers).json
+
+    assert first_page["page"] == 1
+    assert first_page["page_size"] == 1
+    assert first_page["total"] == 3
+    assert [item["id"] for item in first_page["sets"]] == [sets[1]["id"]]
+    assert [item["id"] for item in second_page["sets"]] == [sets[2]["id"]]
+    assert [item["id"] for item in last_page["sets"]] == [sets[0]["id"]]
+    assert past_last_page["sets"] == []
+    assert past_last_page["total"] == 3
+    assert largest_page["page_size"] == 50
+    assert len(largest_page["sets"]) == 3
+    assert default_page["page"] == 1
+    assert default_page["page_size"] == 20
+
+
+@pytest.mark.parametrize(
+    "query",
+    [
+        "?q=" + "x" * 101,
+        "?page=0",
+        "?page=-1",
+        "?page=invalid",
+        "?page_size=0",
+        "?page_size=51",
+        "?page_size=invalid",
+    ],
+)
+def test_postgres_public_search_rejects_invalid_parameters(
+    pg_client, make_user, query
+):
+    _, headers = make_user("invalid-search@example.com", "correct horse")
+
+    response = pg_client.get(f"/sets/public{query}", headers=headers)
+
+    assert response.status_code == 400
+    assert "error" in response.json
+
+
+def test_postgres_public_search_includes_card_count_and_limited_owner_name(
+    pg_client, make_user
+):
+    _, owner_headers = make_user("owner-name@example.com", "correct horse")
+    _, viewer_headers = make_user("owner-name-viewer@example.com", "correct horse")
+    study_set = make_set_public(
+        pg_client,
+        owner_headers,
+        create_set(pg_client, owner_headers, "No card contents").json,
+    )
+    pg_client.post(
+        f"/sets/{study_set['id']}/cards",
+        headers=owner_headers,
+        json={"front": "Secret front", "back": "Secret back"},
+    )
+
+    response = pg_client.get("/sets/public", headers=viewer_headers)
+
+    assert response.status_code == 200
+    item = response.json["sets"][0]
+    assert item["card_count"] == 1
+    assert item["owner_name"] == "owner-name"
+    assert set(item) == {
+        "id",
+        "title",
+        "description",
+        "card_count",
+        "owner_id",
+        "owner_name",
+        "updated_at",
+    }
+    assert "owner-name@example.com" not in response.get_data(as_text=True)
+    assert "Secret front" not in response.get_data(as_text=True)
+    assert "Secret back" not in response.get_data(as_text=True)
+
+
+def test_postgres_public_set_disappears_after_becoming_private(pg_client, make_user):
+    _, owner_headers = make_user("flip-owner@example.com", "correct horse")
+    _, viewer_headers = make_user("flip-viewer@example.com", "correct horse")
+    study_set = make_set_public(
+        pg_client,
+        owner_headers,
+        create_set(pg_client, owner_headers, "Visibility needle").json,
+    )
+
+    visible = pg_client.get(
+        "/sets/public?q=needle", headers=viewer_headers
+    ).json["sets"]
+    made_private = pg_client.patch(
+        f"/sets/{study_set['id']}",
+        headers=owner_headers,
+        json={"visibility": "private"},
+    )
+    hidden = pg_client.get(
+        "/sets/public?q=needle", headers=viewer_headers
+    ).json["sets"]
+
+    assert [item["id"] for item in visible] == [study_set["id"]]
+    assert made_private.status_code == 200
+    assert hidden == []
+
+
+def test_postgres_public_search_requires_authentication(pg_client):
+    response = pg_client.get("/sets/public")
+    assert response.status_code == 401
