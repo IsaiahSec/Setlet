@@ -105,3 +105,38 @@ export function deleteSet(id) {
     method: "DELETE",
   });
 }
+// get a study set and its cards
+export function getSet(id) {
+    return request(`/sets/${id}`);
+}
+
+// update a study set's title or description
+export function updateSet(id, data) {
+    return request(`/sets/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify(data),
+    });
+}
+
+// add a new card to a study set
+export function createCard(setId, front, back) {
+    return request(`/sets/${setId}/cards`, {
+        method: "POST",
+        body: JSON.stringify({ front, back }),
+    });
+}
+
+// update an existing card
+export function updateCard(setId, cardId, data) {
+    return request(`/sets/${setId}/cards/${cardId}`, {
+        method: "PATCH",
+        body: JSON.stringify(data),
+    });
+}
+
+// delete a card from a study set
+export function deleteCard(setId, cardId) {
+    return request(`/sets/${setId}/cards/${cardId}`, {
+        method: "DELETE",
+    });
+}
