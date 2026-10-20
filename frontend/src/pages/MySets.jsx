@@ -137,11 +137,19 @@ function MySets() {
 
                   <p>{set.description || "No description"}</p>
 
+                  <span
+                    className={`mysets-visibility ${
+                    set.visibility === "public" ? "public" : "private"
+                  }`}
+                  >
+                  {set.visibility === "public" ? "Public" : "Private"}
+                  </span>
+
                   {set.card_count != null && (
-                    <p className="mysets-count">
-                      {set.card_count} cards
-                    </p>
-                  )}
+                  <p className="mysets-count">
+                  {set.card_count} cards
+                 </p>
+                )}
 
                   {confirmId === set.id ? (
                     <div className="mysets-actions">

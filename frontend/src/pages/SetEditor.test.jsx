@@ -276,4 +276,92 @@ describe("Set Editor", () => {
       "Title is required"
     );
   });
+
+  it("loads the current visibility from the API", async () => {
+    api.getSet.mockResolvedValue({
+      ...sampleSet,
+      visibility: "public",
+    });
+
+    renderEditor();
+
+    const select = await screen.findByLabelText("Visibility");
+
+    expect(select.value).toBe("public");
+  });
+
+  it("confirms before making a set public", async () => {
+    const confirmMock = vi.fn(() => true);
+    vi.stubGlobal("confirm", confirmMock);
+
+    try {
+      renderEditor();
+
+      const select = await screen.findByLabelText("Visibility");
+
+      fireEvent.change(select, {
+        target: { value: "public" },
+      });
+
+      await waitFor(() => {
+        expect(confirmMock).toHaveBeenCalled();
+        expect(api.updateSet).toHaveBeenCalledWith("2", {
+          visibility: "public",
+        });
+      });
+
+      expect(select.value).toBe("public");
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("does not make a set public when confirmation is canceled", async () => {
+    vi.stubGlobal("confirm", vi.fn(() => false));
+
+    try {
+      renderEditor();
+
+      const select = await screen.findByLabelText("Visibility");
+
+      fireEvent.change(select, {
+        target: { value: "public" },
+      });
+
+      expect(api.updateSet).not.toHaveBeenCalled();
+      expect(select.value).toBe("private");
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("keeps the previous visibility when the API fails", async () => {
+    vi.stubGlobal("confirm", vi.fn(() => true));
+
+    api.updateSet.mockRejectedValue(
+      new Error("Unable to update visibility")
+    );
+
+    try {
+      renderEditor();
+
+      const select = await screen.findByLabelText("Visibility");
+
+      fireEvent.change(select, {
+        target: { value: "public" },
+      });
+
+      expect(
+        await screen.findByRole("alert")
+      ).toHaveProperty(
+        "textContent",
+        "Unable to update visibility"
+      );
+
+      expect(select.value).toBe("private");
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
 });

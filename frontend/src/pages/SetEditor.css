@@ -151,3 +151,40 @@
     padding: 16px;
   }
 }
+/* Visibility settings */
+.seteditor-visibility {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 16px;
+  padding: 16px;
+  background: #f5f3ff;
+  border: 1px solid #ddd6fe;
+  border-radius: 10px;
+}
+
+.seteditor-visibility label {
+  font-weight: 600;
+  color: #4c1d95;
+}
+
+.seteditor-visibility select {
+  padding: 10px 12px;
+  border: 1px solid #c4b5fd;
+  border-radius: 8px;
+  background: white;
+  color: #333;
+  font-size: 14px;
+  max-width: 200px;
+}
+
+.seteditor-visibility select:focus {
+  outline: 2px solid #7c3aed;
+  outline-offset: 2px;
+}
+
+.seteditor-visibility-warning {
+  font-size: 13px;
+  color: #6b7280;
+  margin: 4px 0 0;
+}
