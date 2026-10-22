@@ -163,3 +163,26 @@
     padding: 16px;
   }
 }
+/* Visibility badges */
+.mysets-visibility {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  margin: 8px 0;
+}
+
+.mysets-visibility.private {
+  background-color: #f3f4f6;
+  color: #374151;
+  border: 1px solid #d1d5db;
+}
+
+.mysets-visibility.public {
+  background-color: #ede9fe;
+  color: #5b21b6;
+  border: 1px solid #c4b5fd;
+}

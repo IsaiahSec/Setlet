@@ -17,6 +17,7 @@ function SetEditor() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [cards, setCards] = useState([]);
+  const [visibility, setVisibility] = useState("private");
 
   const [newFront, setNewFront] = useState("");
   const [newBack, setNewBack] = useState("");
@@ -43,6 +44,7 @@ function SetEditor() {
         setTitle(data.title || "");
         setDescription(data.description || "");
         setCards(data.cards || []);
+        setVisibility(data.visibility || "private");
       } catch (err) {
         if (active) {
           setError(err.message);
@@ -86,6 +88,45 @@ function SetEditor() {
       setSaving(false);
     }
   }
+
+
+// Change the visibility of the study set
+async function handleVisibilityChange(event) {
+  const newVisibility = event.target.value;
+
+  if (newVisibility === visibility) return;
+
+  if (newVisibility === "public") {
+    const confirmed = window.confirm(
+      "Anyone with an account will be able to find and read this set and its cards. Do you want to make this set public?"
+    );
+
+    if (!confirmed) return;
+  }
+
+  setError("");
+  setSuccess("");
+  setSaving(true);
+
+  try {
+    const updated = await updateSet(setId, {
+      visibility: newVisibility,
+    });
+
+    setStudySet((previous) => ({
+      ...previous,
+      ...updated,
+      visibility: newVisibility,
+    }));
+
+    setVisibility(newVisibility);
+    setSuccess("Set visibility updated successfully.");
+  } catch (err) {
+    setError(err.message);
+  } finally {
+    setSaving(false);
+  }
+}
 
   // Add a card
   async function handleAddCard(event) {
@@ -204,7 +245,29 @@ function SetEditor() {
         <header className="seteditor-header">
           <h1>Set Editor</h1>
           <p>Edit your study set and manage its flashcards.</p>
-          <div className="seteditor-visibility" data-testid="visibility-slot" />
+          {studySet && (
+  <div
+    className="seteditor-visibility"
+    data-testid="visibility-slot"
+  >
+    <label htmlFor="set-visibility">Visibility</label>
+
+    <select
+      id="set-visibility"
+      value={visibility}
+      onChange={handleVisibilityChange}
+      disabled={saving}
+    >
+      <option value="private">Private</option>
+      <option value="public">Public</option>
+    </select>
+
+    <p className="seteditor-visibility-warning">
+      Public sets can be found and read by other users.
+      Private sets are only accessible to you.
+    </p>
+  </div>
+)}
         </header>
 
         {error && (

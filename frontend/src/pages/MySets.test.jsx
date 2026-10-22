@@ -141,4 +141,41 @@ describe("MySets page", () => {
       (await screen.findByRole("alert")).textContent
     ).toBe("Unable to load sets");
   });
+
+  test("displays a Public badge for public study sets", async () => {
+    listSets.mockResolvedValue([
+      {
+        id: 1,
+        title: "Biology",
+        description: "Chapter 1",
+        card_count: 5,
+        visibility: "public",
+      },
+    ]);
+
+    renderMySets();
+
+    expect(await screen.findByText("Biology")).toBeTruthy();
+    expect(screen.getByText("Public")).toBeTruthy();
+    expect(screen.queryByText("Private")).toBeNull();
+  });
+
+  test("displays a Private badge for private study sets", async () => {
+    listSets.mockResolvedValue([
+      {
+        id: 2,
+        title: "Math",
+        description: "Chapter 2",
+        card_count: 3,
+        visibility: "private",
+      },
+    ]);
+
+    renderMySets();
+
+    expect(await screen.findByText("Math")).toBeTruthy();
+    expect(screen.getByText("Private")).toBeTruthy();
+    expect(screen.queryByText("Public")).toBeNull();
+  });
+
 });
