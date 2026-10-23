@@ -1,7 +1,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { getStudyQueue, submitReview } from "../services/api";
+import { getStudySession, reviewCard } from "../services/api";
 import "./StudyReview.css";
 
 const ratings = [
@@ -47,7 +47,7 @@ function StudyReview() {
     savingRef.current = false;
 
     try {
-      const data = await getStudyQueue(setId);
+      const data = await getStudySession(setId);
       const studyCards = Array.isArray(data.cards) ? data.cards : [];
 
       setSetTitle(data.set?.title || "Study Review");
@@ -82,7 +82,7 @@ function StudyReview() {
     setError("");
 
     try {
-      await submitReview(card.id, rating);
+      await reviewCard(card.id, rating);
 
       setReviewCount((count) => count + 1);
 

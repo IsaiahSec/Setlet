@@ -12,8 +12,8 @@ import StudyReview from "./StudyReview";
 import * as api from "../services/api";
 
 vi.mock("../services/api", () => ({
-  getStudyQueue: vi.fn(),
-  submitReview: vi.fn(),
+  getStudySession: vi.fn(),
+  reviewCard: vi.fn(),
 }));
 
 const sampleSession = {
@@ -57,12 +57,12 @@ afterEach(() => {
 beforeEach(() => {
   vi.clearAllMocks();
 
-  api.getStudyQueue.mockResolvedValue({
+  api.getStudySession.mockResolvedValue({
     ...sampleSession,
     cards: sampleSession.cards.map((card) => ({ ...card })),
   });
 
-  api.submitReview.mockResolvedValue({
+  api.reviewCard.mockResolvedValue({
     card_id: 10,
     due_at: "2026-10-23T12:00:00",
     interval_days: 1,
@@ -78,7 +78,7 @@ describe("Study Review", () => {
 
     expect(await screen.findByText("What is DNA?")).toBeTruthy();
     expect(screen.getByText("Biology Chapter 1")).toBeTruthy();
-    expect(api.getStudyQueue).toHaveBeenCalledWith("2");
+    expect(api.getStudySession).toHaveBeenCalledWith("2");
   });
 
   it("flips a flashcard when clicked", async () => {
@@ -118,7 +118,7 @@ describe("Study Review", () => {
     );
 
     await waitFor(() => {
-      expect(api.submitReview).toHaveBeenCalledWith(10, 3);
+      expect(api.reviewCard).toHaveBeenCalledWith(10, 3);
     });
 
     expect(await screen.findByText("What is a cell?")).toBeTruthy();
@@ -133,7 +133,7 @@ describe("Study Review", () => {
     fireEvent.keyDown(window, { key: "4", code: "Digit4" });
 
     await waitFor(() => {
-      expect(api.submitReview).toHaveBeenCalledWith(10, 4);
+      expect(api.reviewCard).toHaveBeenCalledWith(10, 4);
     });
   });
 
@@ -162,7 +162,7 @@ describe("Study Review", () => {
   });
 
   it("keeps the same card when saving a review fails", async () => {
-    api.submitReview.mockRejectedValueOnce(
+    api.reviewCard.mockRejectedValueOnce(
       new Error("Unable to save review")
     );
 
@@ -189,14 +189,14 @@ describe("Study Review", () => {
     );
 
     await waitFor(() => {
-      expect(api.submitReview).toHaveBeenCalledTimes(2);
+      expect(api.reviewCard).toHaveBeenCalledTimes(2);
     });
 
     expect(await screen.findByText("What is a cell?")).toBeTruthy();
   });
 
   it("shows the empty state with study counts", async () => {
-    api.getStudyQueue.mockResolvedValue({
+    api.getStudySession.mockResolvedValue({
       set: { id: 2, title: "Biology Chapter 1" },
       cards: [],
       counts: {
@@ -248,14 +248,14 @@ describe("Study Review", () => {
     );
 
     await waitFor(() => {
-      expect(api.getStudyQueue).toHaveBeenCalledTimes(2);
+      expect(api.getStudySession).toHaveBeenCalledTimes(2);
     });
   });
 
   it("shows Set not found when the API returns 404", async () => {
     const error = new Error("Not found");
     error.status = 404;
-    api.getStudyQueue.mockRejectedValue(error);
+    api.getStudySession.mockRejectedValue(error);
 
     renderStudyReview();
 
@@ -268,7 +268,7 @@ describe("Study Review", () => {
   });
 
   it("allows retrying when loading the session fails", async () => {
-    api.getStudyQueue
+    api.getStudySession
       .mockRejectedValueOnce(new Error("Network error"))
       .mockResolvedValueOnce(sampleSession);
 
@@ -284,6 +284,6 @@ describe("Study Review", () => {
     );
 
     expect(await screen.findByText("What is DNA?")).toBeTruthy();
-    expect(api.getStudyQueue).toHaveBeenCalledTimes(2);
+    expect(api.getStudySession).toHaveBeenCalledTimes(2);
   });
 });
