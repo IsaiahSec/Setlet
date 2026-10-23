@@ -186,3 +186,26 @@
   color: #5b21b6;
   border: 1px solid #c4b5fd;
 }
+
+/* Study button */
+
+.mysets-study-button {
+  display: inline-block;
+  background-color: #4f2683;
+  color: white;
+  text-decoration: none;
+  padding: 10px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  margin-bottom: 12px;
+}
+
+.mysets-study-button:hover {
+  background-color: #391b61;
+  color: white;
+}
+
+.mysets-study-button:focus-visible {
+  outline: 2px solid #4f2683;
+  outline-offset: 3px;
+}

@@ -24,7 +24,7 @@ The initial frontend structure is organized into three primary areas:
 
 ### Initial Pages
 
-The frontend skeleton currently includes placeholders for:
+The frontend includes the following application pages:
 
 - `Login.jsx` - user login
 - `Signup.jsx` - user registration
@@ -33,11 +33,33 @@ The frontend skeleton currently includes placeholders for:
 - `SetEditor.jsx` - creation and editing of study sets and cards
 - `StudyReview.jsx` - studying and reviewing a set
 
-These files establish the planned frontend organization and do not represent completed features.
+
+### Study Review Feature
+
+The Study Review page is implemented in `StudyReview.jsx` and styled with `StudyReview.css`.
+
+- Users can open Study Review from My Sets or Set Editor.
+- Flashcards display the front first and flip to show the back.
+- Users can flip cards by clicking or pressing Space.
+- Users can rate their recall using Again (1), Hard (2), Good (3), or Easy (4).
+- Keyboard shortcuts 1–4 are supported.
+- Again places the card back into the current review queue.
+- The page displays review progress and a completion summary.
+- Empty queues, loading errors, and missing sets have dedicated states.
+- Failed review submissions display an error without advancing the card.
+- `StudyReview.test.jsx` contains automated frontend tests.
+
+The frontend uses these API endpoints:
+
+- `GET /sets/<set_id>/study` to retrieve the study queue and counts.
+- `POST /cards/<card_id>/review` with a rating from 1 to 4 to submit a review.
+
+These endpoints are required from the backend for full integration. Frontend tests use mocked API responses and do not verify database persistence.
+
 
 ### Service Layer
 
-`services/api.js` is reserved for communication between the frontend and the backend API. This keeps API communication separate from page and UI components.
+services/api.js provides frontend functions for communicating with backend API endpoints, including authentication, study sets, flashcards, and study review requests.
 
 ---
 

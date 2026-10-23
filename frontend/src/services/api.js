@@ -46,7 +46,11 @@ export async function request(endpoint, options) {
             window.location.replace("/login");
        }
 
-    throw new Error(data.error || data.message || "Something went wrong");
+    const error = new Error(
+    data.error || data.message || "Something went wrong"
+    );
+    error.status = response.status;
+    throw error;
     }
 
     return data;
@@ -139,4 +143,18 @@ export function deleteCard(setId, cardId) {
     return request(`/sets/${setId}/cards/${cardId}`, {
         method: "DELETE",
     });
+}
+
+
+// Get the flashcards for a study session
+export function getStudyQueue(setId) {
+  return request(`/sets/${setId}/study`);
+}
+
+// Save a flashcard review rating (1 = Again, 4 = Easy)
+export function submitReview(cardId, rating) {
+  return request(`/cards/${cardId}/review`, {
+    method: "POST",
+    body: JSON.stringify({ rating }),
+  });
 }

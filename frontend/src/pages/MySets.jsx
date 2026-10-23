@@ -151,6 +151,15 @@ function MySets() {
                  </p>
                 )}
 
+                  <div className="mysets-actions">
+                    <Link
+                      to={`/study/${set.id}`}
+                      className="mysets-study-button"
+                    >
+                     Study
+                   </Link>
+                  </div>
+
                   {confirmId === set.id ? (
                     <div className="mysets-actions">
                       <span>Delete this set?</span>

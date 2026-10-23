@@ -245,6 +245,16 @@ async function handleVisibilityChange(event) {
         <header className="seteditor-header">
           <h1>Set Editor</h1>
           <p>Edit your study set and manage its flashcards.</p>
+
+          {studySet && (
+        <Link
+          to={`/study/${setId}`}
+          className="seteditor-study-button"
+        >
+    Study
+  </Link>
+)}
+
           {studySet && (
   <div
     className="seteditor-visibility"
