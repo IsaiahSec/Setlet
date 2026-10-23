@@ -364,4 +364,14 @@ describe("Set Editor", () => {
     }
   });
 
+  it("displays a Study link for the current set", async () => {
+    renderEditor();
+
+    const studyLink = await screen.findByRole("link", {
+      name: "Study",
+    });
+
+    expect(studyLink.getAttribute("href")).toBe("/study/2");
+  });
+
 });

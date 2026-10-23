@@ -178,4 +178,31 @@ describe("MySets page", () => {
     expect(screen.queryByText("Public")).toBeNull();
   });
 
+  test("displays a Study link for each set", async () => {
+    listSets.mockResolvedValue([
+      {
+        id: 1,
+        title: "Biology",
+        description: "Chapter 1",
+      },
+      {
+        id: 2,
+        title: "Math",
+        description: "Chapter 2",
+      },
+    ]);
+
+    renderMySets();
+
+    expect(await screen.findByText("Biology")).toBeTruthy();
+
+    const studyLinks = screen.getAllByRole("link", {
+      name: "Study",
+    });
+
+    expect(studyLinks).toHaveLength(2);
+    expect(studyLinks[0].getAttribute("href")).toBe("/study/1");
+    expect(studyLinks[1].getAttribute("href")).toBe("/study/2");
+  });
+
 });

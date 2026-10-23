@@ -188,3 +188,26 @@
   color: #6b7280;
   margin: 4px 0 0;
 }
+
+/* Study button */
+
+.seteditor-study-button {
+  display: inline-block;
+  background-color: #4f2683;
+  color: white;
+  text-decoration: none;
+  padding: 10px 16px;
+  border-radius: 6px;
+  margin: 12px 0;
+  font-size: 14px;
+}
+
+.seteditor-study-button:hover {
+  background-color: #391b61;
+  color: white;
+}
+
+.seteditor-study-button:focus-visible {
+  outline: 2px solid #4f2683;
+  outline-offset: 3px;
+}

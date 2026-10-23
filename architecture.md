@@ -33,7 +33,7 @@ The frontend includes the following pages:
 - `SetEditor.jsx` - allows owners to edit study sets, manage flashcards, and change set visibility
 - `PublicSets.jsx` - displays publicly available study sets with search and pagination
 - `PublicSetView.jsx` - provides a read-only view of a public set and its flashcards
-- `StudyReview.jsx` - placeholder for the upcoming study and review functionality
+- `StudyReview.jsx` - interactive flashcard study sessions with review ratings and progress tracking
 
 ### Public Sets Features
 
@@ -51,10 +51,31 @@ The public browsing functionality is implemented in the frontend.
 
 The frontend uses Vitest and React Testing Library to test public set listing, search, pagination, empty states, read-only display, owner redirects, and error handling.
 
+### Study Review Feature
+
+The Study Review page is implemented in `StudyReview.jsx` and styled with `StudyReview.css`.
+
+- Users can open Study Review from My Sets or Set Editor.
+- Flashcards display the front first and flip to show the back.
+- Users can flip cards by clicking or pressing Space.
+- Users can rate their recall using Again (1), Hard (2), Good (3), or Easy (4).
+- Keyboard shortcuts 1–4 are supported.
+- Again places the card back into the current review queue.
+- The page displays review progress and a completion summary.
+- Empty queues, loading errors, and missing sets have dedicated states.
+- Failed review submissions display an error without advancing the card.
+- `StudyReview.test.jsx` contains automated frontend tests.
+
+The frontend uses these API endpoints:
+
+- `GET /sets/<set_id>/study` to retrieve the study queue and counts.
+- `POST /cards/<card_id>/review` with a rating from 1 to 4 to submit a review.
+
+These endpoints are required from the backend for full integration. Frontend tests use mocked API responses and do not verify database persistence.
 
 ### Service Layer
 
-`services/api.js` is reserved for communication between the frontend and the backend API. This keeps API communication separate from page and UI components.
+services/api.js provides frontend functions for communicating with backend API endpoints, including authentication, study sets, flashcards, and study review requests.
 
 The API service provides functions for authentication, study set management, flashcard management, and public set browsing. The `listPublicSets(query, page, pageSize)` function calls `GET /sets/public` with search and pagination parameters. The `getSet(id)` function retrieves individual study sets. API errors include HTTP status codes so the frontend can distinguish missing resources from other failures.
 

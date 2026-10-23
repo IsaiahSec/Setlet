@@ -142,6 +142,19 @@ export function deleteCard(setId, cardId) {
         method: "DELETE",
     });
 }
+// Get the flashcards for a study session
+export function getStudySession(setId) {
+  return request(`/sets/${setId}/study`);
+}
+
+// Save a flashcard review rating (1 = Again, 4 = Easy)
+export function reviewCard(cardId, rating) {
+  return request(`/cards/${cardId}/review`, {
+    method: "POST",
+    body: JSON.stringify({ rating }),
+  });
+}
+
 // Get public study sets with search and pagination
 export function listPublicSets(query = "", page = 1, pageSize = 10) {
   const params = new URLSearchParams({
