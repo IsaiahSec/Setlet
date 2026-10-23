@@ -1,0 +1,49 @@
+
+/* Public Sets search */
+
+.publicsets-search {
+  width: 100%;
+  padding: 12px;
+  margin-top: 10px;
+  border: 1px solid #d1c4e9;
+  border-radius: 8px;
+  font-size: 15px;
+  box-sizing: border-box;
+}
+
+.publicsets-search:focus {
+  outline: 2px solid #673ab7;
+  outline-offset: 2px;
+}
+
+/* Pagination */
+
+.publicsets-pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.publicsets-pagination button {
+  padding: 10px 18px;
+  background-color: #673ab7;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.publicsets-pagination button:hover:not(:disabled) {
+  background-color: #512da8;
+}
+
+.publicsets-pagination button:disabled {
+  background-color: #c5bdd4;
+  cursor: not-allowed;
+}
+
+.publicsets-pagination span {
+  font-weight: 500;
+}
