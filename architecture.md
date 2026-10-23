@@ -71,7 +71,10 @@ The frontend uses these API endpoints:
 - `GET /sets/<set_id>/study` to retrieve the study queue and counts.
 - `POST /cards/<card_id>/review` with a rating from 1 to 4 to submit a review.
 
-These endpoints are required from the backend for full integration. Frontend tests use mocked API responses and do not verify database persistence.
+The backend requires authentication for these endpoints and stores review progress
+per user. A card is returned when it is due or has no state for the caller; each
+queue contains due cards first, up to 10 new cards, and at most 50 cards total.
+Frontend tests use mocked API responses and do not verify database persistence.
 
 ### Service Layer
 
@@ -97,7 +100,7 @@ The initial backend structure is organized into three primary areas, mirroring t
 - `db.py` - PostgreSQL connection handling
 - `tests/` - pytest suite, mirroring the structure above
 
-The backend includes authentication and owner-scoped study-set mutations, with table-specific raw SQL models and service validation. Individual set reads are visible to the owner and to other users only when the set is public.
+The backend includes authentication and owner-scoped study-set mutations, with table-specific raw SQL models and service validation. Individual set reads and review endpoints are visible to the owner and to other users only when the set is public. Review progress is scoped to the authenticated user.
 
 Authenticated users can list other users' public sets with `GET /sets/public`,
 optionally searching titles and descriptions by keyword and paginating results.
@@ -123,8 +126,25 @@ MVP tables, per the project proposal: `users`, `study_sets`, `cards`, `review_st
 - `users` - `id` (serial primary key), `email` (unique), `password_hash` (bcrypt), `created_at`
 - `study_sets` - `id`, `owner_id` (references `users`), `title`, `description`, `visibility`, `created_at`, `updated_at`
 - `cards` - `id`, `set_id` (references `study_sets` with `ON DELETE CASCADE`), `front`, `back`, `created_at`, `updated_at`; indexed by `set_id`
+- `review_state`
+  - `user_id` and `card_id` reference `users` and `cards` with `ON DELETE
+    CASCADE` and form the composite primary key.
+  - `ease_factor REAL NOT NULL DEFAULT 2.5`, `interval_days INTEGER NOT NULL
+    DEFAULT 0`, and `repetitions INTEGER NOT NULL DEFAULT 0`.
+  - `due_at TIMESTAMPTZ NOT NULL` and `last_reviewed_at TIMESTAMPTZ NOT NULL`;
+    indexed by `(user_id, due_at)`.
+- `review_logs`
+  - `id SERIAL PRIMARY KEY`; `user_id` and `card_id` reference `users` and
+    `cards` with `ON DELETE CASCADE`.
+  - `rating SMALLINT NOT NULL CHECK (rating BETWEEN 1 AND 4)`,
+    `interval_days_after INTEGER NOT NULL`, and
+    `reviewed_at TIMESTAMPTZ NOT NULL DEFAULT now()`.
+  - Indexed by `(user_id, reviewed_at)`.
 
-Schema definitions for `review_state` and `review_logs` will be added as the data layer is built out.
+`GET /sets/<set_id>/study` returns the visible set, the caller's due and new cards,
+and counts for the entire set. `POST /cards/<card_id>/review` validates a rating
+from 1 to 4, calculates the next schedule, and writes the state and review log
+atomically.
 
 The authenticated set API supports creating, updating, and deleting cards under `/sets/<set_id>/cards`. Only the set owner can manipulate sets and cards. Owners can switch set visibility between `private` and `public`; individual set reads include cards ordered by ID, the owner's name, and whether the viewer is the owner. Set lists remain owner-only and include a `card_count`.
 
@@ -183,17 +203,21 @@ project/
 │   │   ├── routes/
 │   │   │   ├── auth.py
 │   │   │   ├── decorators.py
-│   │   │   └── sets.py
+│   │   │   ├── sets.py
+│   │   │   └── reviews.py
 │   │   ├── services/
 │   │   │   ├── auth.py
-│   │   │   └── study_sets.py
+│   │   │   ├── study_sets.py
+│   │   │   └── review.py
 │   │   ├── models/
 │   │   │   ├── users.py
-│   │   │   └── study_sets.py
+│   │   │   ├── study_sets.py
+│   │   │   └── reviews.py
 │   │   ├── app.py
 │   │   └── db.py
 │   ├── tests/
 │   │   ├── test_study_sets_postgres.py
+│   │   └── test_review_postgres.py
 │   ├── requirements.txt
 │   └── README.md
 │
