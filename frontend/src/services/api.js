@@ -46,7 +46,9 @@ export async function request(endpoint, options) {
             window.location.replace("/login");
        }
 
-    throw new Error(data.error || data.message || "Something went wrong");
+    const error = new Error(data.error || data.message || "Something went wrong");
+    error.status = response.status;
+    throw error;
     }
 
     return data;
@@ -139,4 +141,14 @@ export function deleteCard(setId, cardId) {
     return request(`/sets/${setId}/cards/${cardId}`, {
         method: "DELETE",
     });
+}
+// Get public study sets with search and pagination
+export function listPublicSets(query = "", page = 1, pageSize = 10) {
+  const params = new URLSearchParams({
+    q: query,
+    page: String(page),
+    page_size: String(pageSize),
+  });
+
+  return request(`/sets/public?${params.toString()}`);
 }
