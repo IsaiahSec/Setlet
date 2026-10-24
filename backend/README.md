@@ -63,10 +63,18 @@ refuse to connect unless the database name ends in `_test`.
 - `POST /sets/<id>/cards` - add a card to an owned set (`front` and `back`, each 1–2,000 trimmed characters).
 - `PATCH /sets/<id>/cards/<card_id>` - update a card's `front` and/or `back`.
 - `DELETE /sets/<id>/cards/<card_id>` - delete a card from an owned set.
+- `GET /sets/<id>/study` - get the caller's due and new cards, plus set-wide counts.
+- `POST /cards/<card_id>/review` - rate a visible card from 1 (Again) to 4 (Easy).
 
 `GET /sets/<id>` includes its cards ordered by ID. Non-owners can read public
 sets but cannot update them or their cards. `GET /sets` remains owner-only and
 includes a `card_count` for each set. Deleting a set cascades to its cards.
+
+Study progress is stored separately for each user. The study queue lists due
+cards first, then at most 10 new cards, with a maximum of 50 cards total.
+Submitting a review updates the schedule and appends a review log in one
+transaction. Both endpoints require authentication and return 404 when the
+set is not visible to the caller.
 
 `GET /sets/public` requires authentication and returns only other users' public
 sets. Search is case-insensitive across titles and descriptions, matching all
@@ -77,8 +85,8 @@ or full email address.
 
 ## Structure
 
-- `src/routes/` - Flask route/blueprint definitions (one file per resource: sets, cards, auth, etc.)
-- `src/services/` - business logic (SM-2 scheduling, note derivation, GitHub feedback integration)
+- `src/routes/` - Flask route/blueprint definitions (one file per resource: sets, reviews, auth, etc.)
+- `src/services/` - business logic (review validation and SM-2 scheduling)
 - `src/models/` - raw SQL data-access functions per table (no ORM)
 - `src/db.py` - PostgreSQL connection handling (psycopg2)
 - `tests/` - pytest test suite, mirrors the `src/` structure
