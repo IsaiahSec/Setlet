@@ -42,12 +42,14 @@ npm test
 ## Scope and conventions
 
 - Stay scoped to the assigned Issue. Do not modify files unrelated to the task (e.g. a backend task should not touch `frontend/`, and vice versa).
-- All changes go through a Pull Request into `main` — direct pushes to `main` are blocked by branch protection.
+- Until the MVP is built, open pull requests into `mvp`. A maintainer opens the single `mvp` -> `main` pull request. Reference issues as `Refs #N`, not `Closes #N`.
+- Before starting, branch from the latest `mvp` (not `main`). The code from earlier sub-issues is only there. Do not re-create changes that already exist on `mvp`; read them and build on them.
 - Squash merge only.
 - One teammate approval is required before merge, plus passing status checks (`backend-tests`, `frontend-tests`).
 - Follow existing naming and structure conventions already established in `backend/src/` and `frontend/src/` (see `architecture.md` Section 6 for the current file tree) rather than introducing a new pattern.
 - If a task's acceptance criteria include updating `architecture.md` or another doc, treat that as part of the task, not optional.
-
+- Issues are grouped under feature parents, and titles start with an ID like [F2-BE1]. Before starting, read the assigned issue's parent issue (up to the root parent) and any other issues with the same prefix (e.g., [F2-*]) for context on how the pieces fit together. If you can't open them, proceed with the assigned issue alone.
+- Use that context only to stay consistent (e.g., names, endpoints, schema). Implement only what the assigned issue requires. If a sibling issue contradicts the assigned one, the assigned issue wins and you should not the conflict in the PR description.
 ## Notes
 
 - Database access uses raw SQL via `psycopg2` — no ORM.

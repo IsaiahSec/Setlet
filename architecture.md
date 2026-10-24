@@ -22,22 +22,65 @@ The initial frontend structure is organized into three primary areas:
 - `pages/` - page-level components representing the main application views
 - `services/` - code responsible for communication with backend services
 
-### Initial Pages
 
-The frontend skeleton currently includes placeholders for:
+### Frontend Pages
 
-- `Login.jsx` - user login
-- `Signup.jsx` - user registration
-- `MySets.jsx` - user's study sets
-- `PublicSets.jsx` - publicly available study sets
-- `SetEditor.jsx` - creation and editing of study sets and cards
-- `StudyReview.jsx` - studying and reviewing a set
+The frontend includes the following pages:
 
-These files establish the planned frontend organization and do not represent completed features.
+- `Login.jsx` - user login with form validation and API integration
+- `Signup.jsx` - user registration with form validation and API integration
+- `MySets.jsx` - displays the user's study sets and supports creating and deleting sets
+- `SetEditor.jsx` - allows owners to edit study sets, manage flashcards, and change set visibility
+- `PublicSets.jsx` - displays publicly available study sets with search and pagination
+- `PublicSetView.jsx` - provides a read-only view of a public set and its flashcards
+- `StudyReview.jsx` - interactive flashcard study sessions with review ratings and progress tracking
+
+### Public Sets Features
+
+The public browsing functionality is implemented in the frontend.
+
+- Route `/public` displays public study sets.
+- Search requests use a 300 ms debounce.
+- Pagination supports Previous and Next navigation.
+- Public set cards display title, description, card count, and owner name.
+- Route `/public/:setId` displays a read-only public set and its flashcards.
+- Users can navigate to `/study/:setId` to study a set.
+- Set owners are redirected to `/mysets/:setId`.
+- Missing sets display a "Set not found" message with a link back to Browse.
+- The interface does not display owner email addresses or editing controls for other users' sets.
+
+The frontend uses Vitest and React Testing Library to test public set listing, search, pagination, empty states, read-only display, owner redirects, and error handling.
+
+### Study Review Feature
+
+The Study Review page is implemented in `StudyReview.jsx` and styled with `StudyReview.css`.
+
+- Users can open Study Review from My Sets or Set Editor.
+- Flashcards display the front first and flip to show the back.
+- Users can flip cards by clicking or pressing Space.
+- Users can rate their recall using Again (1), Hard (2), Good (3), or Easy (4).
+- Keyboard shortcuts 1–4 are supported.
+- Again places the card back into the current review queue.
+- The page displays review progress and a completion summary.
+- Empty queues, loading errors, and missing sets have dedicated states.
+- Failed review submissions display an error without advancing the card.
+- `StudyReview.test.jsx` contains automated frontend tests.
+
+The frontend uses these API endpoints:
+
+- `GET /sets/<set_id>/study` to retrieve the study queue and counts.
+- `POST /cards/<card_id>/review` with a rating from 1 to 4 to submit a review.
+
+The backend requires authentication for these endpoints and stores review progress
+per user. A card is returned when it is due or has no state for the caller; each
+queue contains due cards first, up to 10 new cards, and at most 50 cards total.
+Frontend tests use mocked API responses and do not verify database persistence.
 
 ### Service Layer
 
-`services/api.js` is reserved for communication between the frontend and the backend API. This keeps API communication separate from page and UI components.
+services/api.js provides frontend functions for communicating with backend API endpoints, including authentication, study sets, flashcards, and study review requests.
+
+The API service provides functions for authentication, study set management, flashcard management, and public set browsing. The `listPublicSets(query, page, pageSize)` function calls `GET /sets/public` with search and pagination parameters. The `getSet(id)` function retrieves individual study sets. API errors include HTTP status codes so the frontend can distinguish missing resources from other failures.
 
 ---
 
@@ -57,7 +100,12 @@ The initial backend structure is organized into three primary areas, mirroring t
 - `db.py` - PostgreSQL connection handling
 - `tests/` - pytest suite, mirroring the structure above
 
-These directories are currently empty aside from placeholder `__init__.py` files and do not represent completed features, matching the frontend skeleton's scope.
+The backend includes authentication and owner-scoped study-set mutations, with table-specific raw SQL models and service validation. Individual set reads and review endpoints are visible to the owner and to other users only when the set is public. Review progress is scoped to the authenticated user.
+
+Authenticated users can list other users' public sets with `GET /sets/public`,
+optionally searching titles and descriptions by keyword and paginating results.
+The response includes set metadata, card counts, and the owner's email prefix,
+but not card contents or full email addresses.
 
 ### API
 
@@ -76,8 +124,29 @@ PostgreSQL, hosted on Render alongside the backend, accessed via `psycopg2` rath
 MVP tables, per the project proposal: `users`, `study_sets`, `cards`, `review_state`, `review_logs`. Two additional tables — `feedback_limits` and `notes` — are part of the full proposal scope but support post-MVP features, so their schemas will be implemented after the MVP milestone. `db.py` connects using the `DATABASE_URL` environment variable and creates tables on startup if they do not exist. Currently implemented:
 
 - `users` - `id` (serial primary key), `email` (unique), `password_hash` (bcrypt), `created_at`
+- `study_sets` - `id`, `owner_id` (references `users`), `title`, `description`, `visibility`, `created_at`, `updated_at`
+- `cards` - `id`, `set_id` (references `study_sets` with `ON DELETE CASCADE`), `front`, `back`, `created_at`, `updated_at`; indexed by `set_id`
+- `review_state`
+  - `user_id` and `card_id` reference `users` and `cards` with `ON DELETE
+    CASCADE` and form the composite primary key.
+  - `ease_factor REAL NOT NULL DEFAULT 2.5`, `interval_days INTEGER NOT NULL
+    DEFAULT 0`, and `repetitions INTEGER NOT NULL DEFAULT 0`.
+  - `due_at TIMESTAMPTZ NOT NULL` and `last_reviewed_at TIMESTAMPTZ NOT NULL`;
+    indexed by `(user_id, due_at)`.
+- `review_logs`
+  - `id SERIAL PRIMARY KEY`; `user_id` and `card_id` reference `users` and
+    `cards` with `ON DELETE CASCADE`.
+  - `rating SMALLINT NOT NULL CHECK (rating BETWEEN 1 AND 4)`,
+    `interval_days_after INTEGER NOT NULL`, and
+    `reviewed_at TIMESTAMPTZ NOT NULL DEFAULT now()`.
+  - Indexed by `(user_id, reviewed_at)`.
 
-Schema definitions for the remaining MVP tables will be added as the data layer is built out.
+`GET /sets/<set_id>/study` returns the visible set, the caller's due and new cards,
+and counts for the entire set. `POST /cards/<card_id>/review` validates a rating
+from 1 to 4, calculates the next schedule, and writes the state and review log
+atomically.
+
+The authenticated set API supports creating, updating, and deleting cards under `/sets/<set_id>/cards`. Only the set owner can manipulate sets and cards. Owners can switch set visibility between `private` and `public`; individual set reads include cards ordered by ID, the owner's name, and whether the viewer is the owner. Set lists remain owner-only and include a `card_count`.
 
 ---
 
@@ -132,14 +201,23 @@ project/
 ├── backend/
 │   ├── src/
 │   │   ├── routes/
-│   │   │   └── auth.py
+│   │   │   ├── auth.py
+│   │   │   ├── decorators.py
+│   │   │   ├── sets.py
+│   │   │   └── reviews.py
 │   │   ├── services/
-│   │   │   └── auth.py
+│   │   │   ├── auth.py
+│   │   │   ├── study_sets.py
+│   │   │   └── review.py
 │   │   ├── models/
-│   │   │   └── users.py
+│   │   │   ├── users.py
+│   │   │   ├── study_sets.py
+│   │   │   └── reviews.py
 │   │   ├── app.py
 │   │   └── db.py
 │   ├── tests/
+│   │   ├── test_study_sets_postgres.py
+│   │   └── test_review_postgres.py
 │   ├── requirements.txt
 │   └── README.md
 │
