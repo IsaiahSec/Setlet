@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - mvp
+      - post-mvp
 
 permissions:
   contents: read
