@@ -128,24 +128,6 @@ def search_public_sets(viewer_id, terms, page, page_size):
         conn.close()
 
 
-def get_set(owner_id, set_id):
-    """Return an owned study set including its owner id, or None."""
-    conn = get_connection()
-    try:
-        with conn, conn.cursor() as cur:
-            cur.execute(
-                f"SELECT {_SET_FIELDS_WITH_OWNER} FROM study_sets "
-                "WHERE id = %s AND owner_id = %s",
-                (set_id, owner_id),
-            )
-            study_set = _set_from_row(cur.fetchone(), include_owner=True)
-            if study_set is None:
-                return None
-            return _include_cards(cur, set_id, study_set)
-    finally:
-        conn.close()
-
-
 def get_set_for_viewer(set_id, viewer_id):
     """Return a visible study set, including its owner name and cards, or None."""
     conn = get_connection()

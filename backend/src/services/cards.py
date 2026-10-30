@@ -9,6 +9,8 @@ def _validate_text(field, value):
         raise ValidationError(f"{field.capitalize()} is required")
     if not isinstance(value, str):
         raise ValidationError(f"{field.capitalize()} must be a string")
+    if "\x00" in value:
+        raise ValidationError(f"{field.capitalize()} must not contain NUL characters")
     value = value.strip()
     if not 1 <= len(value) <= 2000:
         raise ValidationError(

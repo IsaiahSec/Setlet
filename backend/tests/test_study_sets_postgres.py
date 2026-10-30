@@ -1,5 +1,6 @@
 import psycopg2
 import pytest
+from datetime import datetime
 
 from src.db import get_connection
 
@@ -18,6 +19,11 @@ def make_set_public(client, headers, study_set):
     )
     assert response.status_code == 200
     return study_set
+
+
+def assert_iso8601_utc(value):
+    assert datetime.fromisoformat(value).tzinfo is not None
+    assert value.endswith("+00:00")
 
 
 def test_postgres_set_crud(pg_client, make_user):
@@ -244,6 +250,47 @@ def test_postgres_set_description_is_optional(pg_client, make_user):
 
     assert response.status_code == 201
     assert response.json["description"] == ""
+
+
+@pytest.mark.parametrize(("field", "bad_value"), [("title", "bad\x00title"), ("description", "bad\x00description")])
+def test_postgres_set_rejects_nul_text_without_writing(
+    pg_client, make_user, field, bad_value
+):
+    _, headers = make_user("set-nul@example.com", "correct horse")
+    baseline = create_set(pg_client, headers, "Original title", "Original description").json
+
+    conn = get_connection()
+    try:
+        with conn, conn.cursor() as cursor:
+            cursor.execute("SELECT COUNT(*) FROM study_sets")
+            initial_count = cursor.fetchone()[0]
+    finally:
+        conn.close()
+
+    create_payload = {"title": "Another title", "description": "Another description"}
+    create_payload[field] = bad_value
+    create_response = pg_client.post("/sets", headers=headers, json=create_payload)
+    assert create_response.status_code == 400
+    assert "NUL" in create_response.json["error"]
+
+    update_response = pg_client.patch(
+        f"/sets/{baseline['id']}", headers=headers, json={field: bad_value}
+    )
+    assert update_response.status_code == 400
+    assert "NUL" in update_response.json["error"]
+
+    read = pg_client.get(f"/sets/{baseline['id']}", headers=headers)
+    assert read.status_code == 200
+    assert read.json["title"] == "Original title"
+    assert read.json["description"] == "Original description"
+
+    conn = get_connection()
+    try:
+        with conn, conn.cursor() as cursor:
+            cursor.execute("SELECT COUNT(*) FROM study_sets")
+            assert cursor.fetchone()[0] == initial_count
+    finally:
+        conn.close()
 
 
 @pytest.mark.parametrize(
@@ -555,6 +602,61 @@ def test_postgres_card_endpoints_reject_non_object_bodies(pg_client, make_user):
     assert update.json == {"error": "Request body must be a JSON object"}
 
 
+@pytest.mark.parametrize(("field", "bad_value"), [("front", "bad\x00front"), ("back", "bad\x00back")])
+def test_postgres_card_rejects_nul_text_without_writing(
+    pg_client, make_user, field, bad_value
+):
+    _, headers = make_user("card-nul@example.com", "correct horse")
+    study_set = create_set(pg_client, headers, "Card NUL").json
+    baseline_card = pg_client.post(
+        f"/sets/{study_set['id']}/cards",
+        headers=headers,
+        json={"front": "Original front", "back": "Original back"},
+    ).json
+
+    conn = get_connection()
+    try:
+        with conn, conn.cursor() as cursor:
+            cursor.execute("SELECT COUNT(*) FROM cards WHERE set_id = %s", (study_set["id"],))
+            initial_count = cursor.fetchone()[0]
+    finally:
+        conn.close()
+
+    create_payload = {"front": "Second front", "back": "Second back"}
+    create_payload[field] = bad_value
+    create_response = pg_client.post(
+        f"/sets/{study_set['id']}/cards", headers=headers, json=create_payload
+    )
+    assert create_response.status_code == 400
+    assert "NUL" in create_response.json["error"]
+
+    update_response = pg_client.patch(
+        f"/sets/{study_set['id']}/cards/{baseline_card['id']}",
+        headers=headers,
+        json={field: bad_value},
+    )
+    assert update_response.status_code == 400
+    assert "NUL" in update_response.json["error"]
+
+    read = pg_client.get(f"/sets/{study_set['id']}", headers=headers)
+    assert read.status_code == 200
+    assert read.json["cards"] == [
+        {
+            "id": baseline_card["id"],
+            "front": "Original front",
+            "back": "Original back",
+        }
+    ]
+
+    conn = get_connection()
+    try:
+        with conn, conn.cursor() as cursor:
+            cursor.execute("SELECT COUNT(*) FROM cards WHERE set_id = %s", (study_set["id"],))
+            assert cursor.fetchone()[0] == initial_count
+    finally:
+        conn.close()
+
+
 def test_postgres_public_sets_exclude_private_and_owned_sets(pg_client, make_user):
     owner_id, owner_headers = make_user("public-owner@example.com", "correct horse")
     _, viewer_headers = make_user("public-viewer@example.com", "correct horse")
@@ -757,6 +859,51 @@ def test_postgres_public_search_paginates_and_orders_results(pg_client, make_use
     assert default_page["page_size"] == 20
 
 
+def test_postgres_datetime_fields_are_iso8601_utc(pg_client, make_user):
+    _, owner_headers = make_user("iso-owner@example.com", "correct horse")
+    _, viewer_headers = make_user("iso-viewer@example.com", "correct horse")
+    created = create_set(pg_client, owner_headers, "ISO Set").json
+    make_set_public(pg_client, owner_headers, created)
+
+    owned_list = pg_client.get("/sets", headers=owner_headers)
+    read = pg_client.get(f"/sets/{created['id']}", headers=owner_headers)
+    public_list = pg_client.get("/sets/public", headers=viewer_headers)
+
+    for value in (
+        created["created_at"],
+        created["updated_at"],
+        owned_list.json["sets"][0]["created_at"],
+        owned_list.json["sets"][0]["updated_at"],
+        read.json["created_at"],
+        read.json["updated_at"],
+        public_list.json["sets"][0]["updated_at"],
+    ):
+        assert_iso8601_utc(value)
+
+
+def test_postgres_public_search_enforces_page_bounds(pg_client, make_user):
+    _, headers = make_user("page-bounds@example.com", "correct horse")
+
+    page_one = pg_client.get("/sets/public?page=1", headers=headers)
+    page_ten_thousand = pg_client.get("/sets/public?page=10000", headers=headers)
+    too_large = pg_client.get("/sets/public?page=10001", headers=headers)
+    extreme = pg_client.get("/sets/public?page=99999999999999999999", headers=headers)
+
+    assert page_one.status_code == 200
+    assert page_ten_thousand.status_code == 200
+    assert too_large.status_code == 400
+    assert extreme.status_code == 400
+
+
+def test_postgres_public_search_rejects_nul_query(pg_client, make_user):
+    _, headers = make_user("nul-query@example.com", "correct horse")
+
+    response = pg_client.get("/sets/public?q=%00", headers=headers)
+
+    assert response.status_code == 400
+    assert "NUL" in response.json["error"]
+
+
 @pytest.mark.parametrize(
     "query",
     [
@@ -764,6 +911,8 @@ def test_postgres_public_search_paginates_and_orders_results(pg_client, make_use
         "?page=0",
         "?page=-1",
         "?page=invalid",
+        "?page=10001",
+        "?page=99999999999999999999",
         "?page_size=0",
         "?page_size=51",
         "?page_size=invalid",
