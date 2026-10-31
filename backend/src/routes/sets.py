@@ -23,7 +23,11 @@ def create_set():
 @sets_bp.get("")
 @require_auth
 def list_sets():
-    return jsonify({"sets": study_sets.list_sets(g.user_id)}), 200
+    try:
+        sets = study_sets_service.list_sets(g.user_id, request.args.get("q"))
+    except study_sets_service.ValidationError as error:
+        return jsonify({"error": error.message}), 400
+    return jsonify({"sets": sets}), 200
 
 
 @sets_bp.get("/public")
@@ -35,6 +39,9 @@ def list_public_sets():
             request.args.get("q"),
             request.args.get("page"),
             request.args.get("page_size"),
+            request.args.get("owner_id"),
+            request.args.get("shared_from"),
+            request.args.get("shared_to"),
         )
     except study_sets_service.ValidationError as error:
         return jsonify({"error": error.message}), 400

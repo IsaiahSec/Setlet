@@ -1,6 +1,6 @@
 import psycopg2
 import pytest
-from datetime import datetime
+from datetime import datetime, timezone
 
 from src.db import get_connection
 
@@ -18,7 +18,7 @@ def make_set_public(client, headers, study_set):
         f"/sets/{study_set['id']}", headers=headers, json={"visibility": "public"}
     )
     assert response.status_code == 200
-    return study_set
+    return response.json
 
 
 def assert_iso8601_utc(value):
@@ -96,6 +96,76 @@ def test_postgres_list_only_returns_owners_sets_most_recent_first(pg_client, mak
         first["id"],
         second["id"],
     ]
+
+
+def test_postgres_personal_search_only_returns_matching_sets_owned_by_caller(
+    pg_client, make_user
+):
+    _, owner_headers = make_user("personal-search-owner@example.com", "correct horse")
+    _, other_headers = make_user("personal-search-other@example.com", "correct horse")
+    owner_title_match = create_set(pg_client, owner_headers, "Needle in title").json
+    owner_description_match = create_set(
+        pg_client, owner_headers, "Unrelated", "contains needle here"
+    ).json
+    owner_non_match = create_set(pg_client, owner_headers, "No match").json
+    other_private = create_set(pg_client, other_headers, "Needle private").json
+    other_public = make_set_public(
+        pg_client, other_headers, create_set(pg_client, other_headers, "Needle public").json
+    )
+
+    response = pg_client.get("/sets?q=needle", headers=owner_headers)
+
+    assert response.status_code == 200
+    result_ids = {item["id"] for item in response.json["sets"]}
+    assert result_ids == {owner_title_match["id"], owner_description_match["id"]}
+    assert owner_non_match["id"] not in result_ids
+    assert other_private["id"] not in result_ids
+    assert other_public["id"] not in result_ids
+
+
+def test_postgres_personal_search_matches_title_description_and_literal_like_chars(
+    pg_client, make_user
+):
+    _, headers = make_user("personal-search-rules@example.com", "correct horse")
+    matching = create_set(pg_client, headers, "CrImSoN sky", "quiet COmet").json
+    title_only = create_set(pg_client, headers, "Crimson", "unrelated").json
+    description_only = create_set(pg_client, headers, "Comet", "unrelated").json
+    literal = create_set(pg_client, headers, "100%_safe\\path").json
+    wildcard_decoy = create_set(pg_client, headers, "100xx_safe\\path").json
+    underscore_decoy = create_set(pg_client, headers, "100%xsafe\\path").json
+
+    all_terms = pg_client.get("/sets?q=CRIMSON%20comet", headers=headers)
+    trimmed = pg_client.get("/sets?q=%20%20crimson%20%20", headers=headers)
+    literal_query = pg_client.get("/sets?q=100%25_safe%5Cpath", headers=headers)
+
+    assert all_terms.status_code == 200
+    assert [item["id"] for item in all_terms.json["sets"]] == [matching["id"]]
+    assert {item["id"] for item in trimmed.json["sets"]} == {
+        matching["id"],
+        title_only["id"],
+    }
+    for query, expected_ids in (
+        ("crimson", {matching["id"], title_only["id"]}),
+        ("quiet", {matching["id"]}),
+        ("comet", {matching["id"], description_only["id"]}),
+        ("unrelated", {title_only["id"], description_only["id"]}),
+    ):
+        result = pg_client.get(f"/sets?q={query}", headers=headers).json
+        assert {item["id"] for item in result["sets"]} == expected_ids
+    literal_ids = {item["id"] for item in literal_query.json["sets"]}
+    assert literal_ids == {literal["id"]}
+    assert wildcard_decoy["id"] not in literal_ids
+    assert underscore_decoy["id"] not in literal_ids
+
+
+@pytest.mark.parametrize("query", ["?q=" + "x" * 101, "?q=%00"])
+def test_postgres_personal_search_rejects_invalid_query(pg_client, make_user, query):
+    _, headers = make_user("personal-invalid-query@example.com", "correct horse")
+
+    response = pg_client.get(f"/sets{query}", headers=headers)
+
+    assert response.status_code == 400
+    assert "error" in response.json
 
 
 def test_postgres_non_owner_cannot_read_update_or_delete_set(pg_client, make_user):
@@ -690,6 +760,47 @@ def test_postgres_public_sets_exclude_private_and_owned_sets(pg_client, make_use
     assert item["owner_id"] == owner_id
 
 
+def test_postgres_public_owner_id_filter_only_returns_requested_owner(
+    pg_client, make_user
+):
+    owner_a_id, owner_a_headers = make_user("owner-a@example.com", "correct horse")
+    owner_b_id, owner_b_headers = make_user("owner-b@example.com", "correct horse")
+    viewer_id, viewer_headers = make_user("owner-filter-viewer@example.com", "correct horse")
+    owner_a_public = make_set_public(
+        pg_client, owner_a_headers, create_set(pg_client, owner_a_headers, "Owner A set").json
+    )
+    owner_b_public = make_set_public(
+        pg_client, owner_b_headers, create_set(pg_client, owner_b_headers, "Owner B set").json
+    )
+
+    filtered = pg_client.get(
+        f"/sets/public?owner_id={owner_a_id}", headers=viewer_headers
+    )
+    own_filtered = pg_client.get(
+        f"/sets/public?owner_id={viewer_id}", headers=viewer_headers
+    )
+
+    assert filtered.status_code == 200
+    assert [item["id"] for item in filtered.json["sets"]] == [owner_a_public["id"]]
+    assert owner_b_public["id"] not in {item["id"] for item in filtered.json["sets"]}
+    assert own_filtered.status_code == 200
+    assert own_filtered.json["sets"] == []
+    assert own_filtered.json["total"] == 0
+    assert owner_b_id != owner_a_id
+
+
+@pytest.mark.parametrize("owner_id", ["0", "-1", "abc"])
+def test_postgres_public_owner_id_filter_rejects_invalid_values(
+    pg_client, make_user, owner_id
+):
+    _, headers = make_user("invalid-owner-filter@example.com", "correct horse")
+
+    response = pg_client.get(f"/sets/public?owner_id={owner_id}", headers=headers)
+
+    assert response.status_code == 400
+    assert "error" in response.json
+
+
 def test_postgres_public_search_matches_title_description_and_all_terms(
     pg_client, make_user
 ):
@@ -859,6 +970,91 @@ def test_postgres_public_search_paginates_and_orders_results(pg_client, make_use
     assert default_page["page_size"] == 20
 
 
+def test_postgres_public_search_shared_date_filters_include_boundary_days(
+    pg_client, make_user
+):
+    _, owner_headers = make_user("shared-date-owner@example.com", "correct horse")
+    _, viewer_headers = make_user("shared-date-viewer@example.com", "correct horse")
+    start_day = make_set_public(
+        pg_client,
+        owner_headers,
+        create_set(pg_client, owner_headers, "Start day").json,
+    )
+    end_day = make_set_public(
+        pg_client,
+        owner_headers,
+        create_set(pg_client, owner_headers, "End day").json,
+    )
+    outside = make_set_public(
+        pg_client,
+        owner_headers,
+        create_set(pg_client, owner_headers, "Outside day").json,
+    )
+
+    connection = get_connection()
+    try:
+        with connection, connection.cursor() as cursor:
+            cursor.execute(
+                "UPDATE study_sets SET shared_at = CASE id "
+                "WHEN %s THEN TIMESTAMPTZ '2025-02-01 00:00:00+00' "
+                "WHEN %s THEN TIMESTAMPTZ '2025-02-02 23:59:59+00' "
+                "WHEN %s THEN TIMESTAMPTZ '2025-01-31 12:00:00+00' END "
+                "WHERE id IN (%s, %s, %s)",
+                (
+                    start_day["id"],
+                    end_day["id"],
+                    outside["id"],
+                    start_day["id"],
+                    end_day["id"],
+                    outside["id"],
+                ),
+            )
+    finally:
+        connection.close()
+
+    in_range = pg_client.get(
+        "/sets/public?shared_from=2025-02-01&shared_to=2025-02-02",
+        headers=viewer_headers,
+    )
+    end_only = pg_client.get(
+        "/sets/public?shared_from=2025-02-02&shared_to=2025-02-02",
+        headers=viewer_headers,
+    )
+    reversed_range = pg_client.get(
+        "/sets/public?shared_from=2025-02-03&shared_to=2025-02-02",
+        headers=viewer_headers,
+    )
+    malformed = pg_client.get(
+        "/sets/public?shared_from=2025-2-01",
+        headers=viewer_headers,
+    )
+
+    assert in_range.status_code == 200
+    assert {item["id"] for item in in_range.json["sets"]} == {
+        start_day["id"],
+        end_day["id"],
+    }
+    assert outside["id"] not in {item["id"] for item in in_range.json["sets"]}
+    assert [item["id"] for item in end_only.json["sets"]] == [end_day["id"]]
+    assert reversed_range.status_code == 400
+    assert malformed.status_code == 400
+
+
+def test_postgres_public_filters_never_include_private_sets(pg_client, make_user):
+    owner_id, owner_headers = make_user("private-filter-owner@example.com", "correct horse")
+    _, viewer_headers = make_user("private-filter-viewer@example.com", "correct horse")
+    private_set = create_set(pg_client, owner_headers, "Private with filters").json
+
+    response = pg_client.get(
+        f"/sets/public?owner_id={owner_id}&shared_from=2020-01-01&q=private",
+        headers=viewer_headers,
+    )
+
+    assert response.status_code == 200
+    assert response.json["sets"] == []
+    assert private_set["id"] not in {item["id"] for item in response.json["sets"]}
+
+
 def test_postgres_datetime_fields_are_iso8601_utc(pg_client, make_user):
     _, owner_headers = make_user("iso-owner@example.com", "correct horse")
     _, viewer_headers = make_user("iso-viewer@example.com", "correct horse")
@@ -877,6 +1073,7 @@ def test_postgres_datetime_fields_are_iso8601_utc(pg_client, make_user):
         read.json["created_at"],
         read.json["updated_at"],
         public_list.json["sets"][0]["updated_at"],
+        public_list.json["sets"][0]["shared_at"],
     ):
         assert_iso8601_utc(value)
 
@@ -959,36 +1156,53 @@ def test_postgres_public_search_includes_card_count_and_limited_owner_name(
         "owner_id",
         "owner_name",
         "updated_at",
+        "shared_at",
     }
     assert "owner-name@example.com" not in response.get_data(as_text=True)
     assert "Secret front" not in response.get_data(as_text=True)
     assert "Secret back" not in response.get_data(as_text=True)
+    assert item["shared_at"] is not None
 
 
-def test_postgres_public_set_disappears_after_becoming_private(pg_client, make_user):
+def test_postgres_public_set_shared_at_and_visibility_toggles(pg_client, make_user):
     _, owner_headers = make_user("flip-owner@example.com", "correct horse")
     _, viewer_headers = make_user("flip-viewer@example.com", "correct horse")
-    study_set = make_set_public(
-        pg_client,
-        owner_headers,
-        create_set(pg_client, owner_headers, "Visibility needle").json,
-    )
+    study_set = create_set(pg_client, owner_headers, "Visibility needle").json
+    set_url = f"/sets/{study_set['id']}"
 
+    hidden_before = pg_client.get(
+        "/sets/public?q=needle", headers=viewer_headers
+    ).json["sets"]
+    made_public = pg_client.patch(
+        set_url, headers=owner_headers, json={"visibility": "public"}
+    )
     visible = pg_client.get(
         "/sets/public?q=needle", headers=viewer_headers
     ).json["sets"]
     made_private = pg_client.patch(
-        f"/sets/{study_set['id']}",
-        headers=owner_headers,
-        json={"visibility": "private"},
+        set_url, headers=owner_headers, json={"visibility": "private"}
     )
     hidden = pg_client.get(
         "/sets/public?q=needle", headers=viewer_headers
     ).json["sets"]
+    connection = get_connection()
+    try:
+        with connection, connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT shared_at FROM study_sets WHERE id = %s",
+                (study_set["id"],),
+            )
+            shared_at_after_private = cursor.fetchone()[0]
+    finally:
+        connection.close()
 
+    assert hidden_before == []
+    assert made_public.status_code == 200
     assert [item["id"] for item in visible] == [study_set["id"]]
+    assert datetime.fromisoformat(visible[0]["shared_at"]).tzinfo == timezone.utc
     assert made_private.status_code == 200
     assert hidden == []
+    assert shared_at_after_private is None
 
 
 def test_postgres_public_search_requires_authentication(pg_client):
