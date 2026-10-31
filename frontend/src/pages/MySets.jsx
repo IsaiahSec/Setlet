@@ -158,6 +158,12 @@ function MySets() {
                     >
                      Study
                    </Link>
+                    <Link
+                      to={`/flip/${set.id}`}
+                      className="mysets-study-button"
+                    >
+                      Flip through
+                    </Link>
                   </div>
 
                   {confirmId === set.id ? (

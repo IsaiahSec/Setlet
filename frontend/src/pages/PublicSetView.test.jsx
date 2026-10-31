@@ -78,6 +78,16 @@ describe("PublicSetView page", () => {
     expect(link.getAttribute("href")).toBe("/study/5");
   });
 
+  test("provides a Flip through link for the set", async () => {
+    renderPublicSetView();
+
+    const link = await screen.findByRole("link", {
+      name: "Flip through",
+    });
+
+    expect(link.getAttribute("href")).toBe("/flip/5");
+  });
+
   test("does not show editing or deletion controls", async () => {
     renderPublicSetView();
 
