@@ -11,6 +11,19 @@ _UPDATE_FIELDS = {
 }
 
 
+def _append_search_term_conditions(conditions, values, terms):
+    for term in terms:
+        escaped_term = (
+            term.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        )
+        pattern = f"%{escaped_term}%"
+        conditions.append(
+            "(study_sets.title ILIKE %s ESCAPE '\\' "
+            "OR study_sets.description ILIKE %s ESCAPE '\\')"
+        )
+        values.extend((pattern, pattern))
+
+
 def _set_from_row(row, include_owner=False):
     if row is None:
         return None
@@ -50,8 +63,14 @@ def create_set(owner_id, title, description):
         conn.close()
 
 
-def list_sets(owner_id):
+def list_sets(owner_id, terms=None):
     """Return the owner's study sets, most recently updated first."""
+    terms = terms or []
+    conditions = ["study_sets.owner_id = %s"]
+    values = [owner_id]
+    _append_search_term_conditions(conditions, values, terms)
+    where_clause = " AND ".join(conditions)
+
     conn = get_connection()
     try:
         with conn, conn.cursor() as cur:
@@ -59,8 +78,9 @@ def list_sets(owner_id):
                 f"SELECT {_SET_FIELDS}, "
                 "(SELECT COUNT(*) FROM cards WHERE cards.set_id = study_sets.id) "
                 "AS card_count FROM study_sets "
-                "WHERE owner_id = %s ORDER BY updated_at DESC, id DESC",
-                (owner_id,),
+                f"WHERE {where_clause} "
+                "ORDER BY updated_at DESC, id DESC",
+                values,
             )
             return [
                 {**_set_from_row(row[:6]), "card_count": row[6]}
@@ -70,20 +90,28 @@ def list_sets(owner_id):
         conn.close()
 
 
-def search_public_sets(viewer_id, terms, page, page_size):
+def search_public_sets(
+    viewer_id,
+    terms,
+    page,
+    page_size,
+    owner_id=None,
+    shared_from=None,
+    shared_to=None,
+):
     """Return matching public sets owned by other users and the full match count."""
     conditions = ["study_sets.visibility = 'public'", "study_sets.owner_id <> %s"]
     values = [viewer_id]
-    for term in terms:
-        escaped_term = (
-            term.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
-        )
-        pattern = f"%{escaped_term}%"
-        conditions.append(
-            "(study_sets.title ILIKE %s ESCAPE '\\' "
-            "OR study_sets.description ILIKE %s ESCAPE '\\')"
-        )
-        values.extend((pattern, pattern))
+    if owner_id is not None:
+        conditions.append("study_sets.owner_id = %s")
+        values.append(owner_id)
+    if shared_from is not None:
+        conditions.append("study_sets.shared_at >= %s::date")
+        values.append(shared_from)
+    if shared_to is not None:
+        conditions.append("study_sets.shared_at < (%s::date + INTERVAL '1 day')")
+        values.append(shared_to)
+    _append_search_term_conditions(conditions, values, terms)
     where_clause = " AND ".join(conditions)
 
     conn = get_connection()
@@ -99,7 +127,8 @@ def search_public_sets(viewer_id, terms, page, page_size):
                 "SELECT study_sets.id, study_sets.title, study_sets.description, "
                 "(SELECT COUNT(*) FROM cards WHERE cards.set_id = study_sets.id) "
                 "AS card_count, study_sets.owner_id, "
-                "split_part(users.email, '@', 1) AS owner_name, study_sets.updated_at "
+                "split_part(users.email, '@', 1) AS owner_name, study_sets.updated_at, "
+                "study_sets.shared_at "
                 "FROM study_sets JOIN users ON users.id = study_sets.owner_id "
                 f"WHERE {where_clause} "
                 "ORDER BY study_sets.updated_at DESC, study_sets.id DESC "
@@ -117,6 +146,7 @@ def search_public_sets(viewer_id, terms, page, page_size):
                             "owner_id",
                             "owner_name",
                             "updated_at",
+                            "shared_at",
                         ),
                         row,
                     )
@@ -163,6 +193,14 @@ def update_set(owner_id, set_id, fields):
         for field in ("title", "description", "visibility")
         if field in fields
     ]
+    if "visibility" in fields:
+        updates.append(
+            "shared_at = CASE "
+            "WHEN %s = 'public' AND visibility <> 'public' THEN now() "
+            "WHEN %s = 'private' AND visibility <> 'private' THEN NULL "
+            "ELSE shared_at END"
+        )
+        values.extend((fields["visibility"], fields["visibility"]))
     updates.append("updated_at = now()")
 
     conn = get_connection()
