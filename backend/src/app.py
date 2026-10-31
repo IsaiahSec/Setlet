@@ -1,8 +1,10 @@
 import os
+from datetime import datetime, timezone
 
 from dotenv import load_dotenv
 from flask import Flask
 from flask_cors import CORS
+from flask.json.provider import DefaultJSONProvider
 
 from src.db import init_db
 from src.routes.auth import auth_bp
@@ -12,8 +14,18 @@ from src.routes.sets import sets_bp
 load_dotenv()
 
 
+class ISOJSONProvider(DefaultJSONProvider):
+    def default(self, obj):
+        if isinstance(obj, datetime):
+            if obj.tzinfo is None:
+                obj = obj.replace(tzinfo=timezone.utc)
+            return obj.astimezone(timezone.utc).isoformat(timespec="seconds")
+        return super().default(obj)
+
+
 def create_app(initialize_database=True):
     app = Flask(__name__)
+    app.json = ISOJSONProvider(app)
     CORS(
         app,
         resources={r"/*": {"origins": os.environ.get("FRONTEND_ORIGIN", "http://localhost:5173")}},

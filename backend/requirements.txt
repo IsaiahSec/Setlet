@@ -3,5 +3,6 @@ flask-cors
 psycopg2-binary
 bcrypt
 python-dotenv
+gunicorn
 pytest
 pytest-cov

@@ -28,6 +28,8 @@ def login():
         data = {}
     try:
         token = auth.login(data.get("email"), data.get("password"))
+    except auth.ValidationError as e:
+        return jsonify({"error": e.message}), 400
     except auth.InvalidCredentialsError:
         return jsonify({"error": "Invalid email or password"}), 401
     return jsonify({"token": token}), 200

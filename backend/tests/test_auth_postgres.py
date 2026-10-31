@@ -49,3 +49,38 @@ def test_postgres_auth_me_rejects_invalid_authentication(
 
     assert response.status_code == 401
     assert response.json == {"error": "Authentication required"}
+
+
+@pytest.mark.parametrize(
+    ("endpoint", "payload"),
+    [
+        ("/auth/signup", {"email": "bad\x00@example.com", "password": "correct horse"}),
+        ("/auth/signup", {"email": "valid@example.com", "password": "bad\x00password"}),
+        ("/auth/login", {"email": "bad\x00@example.com", "password": "correct horse"}),
+        ("/auth/login", {"email": "valid@example.com", "password": "bad\x00password"}),
+    ],
+)
+def test_postgres_auth_rejects_nul_text_fields_without_writing(
+    pg_client, make_user, endpoint, payload
+):
+    make_user("valid@example.com", "correct horse")
+    connection = db.get_connection()
+    try:
+        with connection, connection.cursor() as cursor:
+            cursor.execute("SELECT COUNT(*) FROM users")
+            initial_count = cursor.fetchone()[0]
+    finally:
+        connection.close()
+
+    response = pg_client.post(endpoint, json=payload)
+
+    assert response.status_code == 400
+    assert "NUL" in response.json["error"]
+
+    connection = db.get_connection()
+    try:
+        with connection, connection.cursor() as cursor:
+            cursor.execute("SELECT COUNT(*) FROM users")
+            assert cursor.fetchone()[0] == initial_count
+    finally:
+        connection.close()

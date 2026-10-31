@@ -79,9 +79,12 @@ set is not visible to the caller.
 `GET /sets/public` requires authentication and returns only other users' public
 sets. Search is case-insensitive across titles and descriptions, matching all
 of up to five whitespace-separated terms. Pagination defaults to page 1 with
-20 results per page and supports page sizes up to 50. Results include a card
-count and the owner's name (the part of their email before `@`), but no cards
-or full email address.
+20 results per page and supports page sizes up to 50. `page` must be between
+1 and 10,000. Results include a card count and the owner's name (the part of
+their email before `@`), but no cards or full email address.
+
+All datetime values returned by JSON responses use ISO 8601 format with a UTC
+offset (for example, `2026-10-24T21:13:00+00:00`).
 
 ## Structure
 

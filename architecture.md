@@ -106,6 +106,8 @@ Authenticated users can list other users' public sets with `GET /sets/public`,
 optionally searching titles and descriptions by keyword and paginating results.
 The response includes set metadata, card counts, and the owner's email prefix,
 but not card contents or full email addresses.
+The `page` parameter is limited to values from 1 through 10,000. Datetime
+fields returned by backend JSON responses use ISO 8601 with a UTC offset.
 
 ### API
 

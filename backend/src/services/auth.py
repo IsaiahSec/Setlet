@@ -29,6 +29,11 @@ class InvalidCredentialsError(Exception):
     pass
 
 
+def _reject_nul(field_name, value):
+    if "\x00" in value:
+        raise ValidationError(f"{field_name} must not contain NUL characters")
+
+
 def _serializer():
     secret_key = os.environ.get("SECRET_KEY")
     if not secret_key:
@@ -52,6 +57,7 @@ def verify_token(token):
 def _normalize_email(email):
     if not isinstance(email, str) or not email.strip():
         raise ValidationError("Email is required")
+    _reject_nul("Email", email)
     email = email.strip().lower()
     local, at, domain = email.partition("@")
     if (
@@ -69,6 +75,7 @@ def _normalize_email(email):
 def _validate_password(password):
     if not isinstance(password, str) or not password:
         raise ValidationError("Password is required")
+    _reject_nul("Password", password)
     if len(password.encode("utf-8")) > BCRYPT_MAX_PASSWORD_BYTES:
         raise ValidationError("Password must be at most 72 bytes")
     return password
@@ -87,6 +94,8 @@ def login(email, password):
     """Return a signed token for valid credentials, else raise InvalidCredentialsError."""
     if not isinstance(email, str) or not isinstance(password, str):
         raise InvalidCredentialsError()
+    _reject_nul("Email", email)
+    _reject_nul("Password", password)
     user = users.get_user_by_email(email.strip().lower())
     stored_hash = user["password_hash"].encode("utf-8") if user else _DUMMY_HASH
     try:

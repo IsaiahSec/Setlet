@@ -9,6 +9,11 @@ class ValidationError(Exception):
         self.message = message
 
 
+def _reject_nul(field_name, value):
+    if "\x00" in value:
+        raise ValidationError(f"{field_name} must not contain NUL characters")
+
+
 def _validate_body(data):
     if not isinstance(data, dict):
         raise ValidationError("Request body must be a JSON object")
@@ -19,6 +24,7 @@ def _validate_title(title):
         raise ValidationError("Title is required")
     if not isinstance(title, str):
         raise ValidationError("Title must be a string")
+    _reject_nul("Title", title)
     title = title.strip()
     if not 1 <= len(title) <= 200:
         raise ValidationError("Title must be between 1 and 200 characters")
@@ -28,6 +34,7 @@ def _validate_title(title):
 def _validate_description(description):
     if not isinstance(description, str):
         raise ValidationError("Description must be a string")
+    _reject_nul("Description", description)
     if len(description) > 1000:
         raise ValidationError("Description must be at most 1000 characters")
     return description
@@ -69,9 +76,10 @@ def _validate_page(value, default, minimum, maximum=None):
 
 def list_public_sets(viewer_id, query, page, page_size):
     query = (query or "").strip()
+    _reject_nul("Search query", query)
     if len(query) > 100:
         raise ValidationError("Search query must be at most 100 characters")
-    page = _validate_page(page, 1, 1)
+    page = _validate_page(page, 1, 1, 10000)
     page_size = _validate_page(page_size, 20, 1, 50)
     terms = query.split()[:5]
     sets, total = study_sets.search_public_sets(viewer_id, terms, page, page_size)

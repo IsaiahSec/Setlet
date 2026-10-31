@@ -77,6 +77,8 @@ def test_review_inserts_then_updates_state_and_appends_logs(
     assert first.json["card_id"] == card["id"]
     assert first.json["interval_days"] == 1
     assert first.json["ease_factor"] == 2.5
+    assert datetime.fromisoformat(first.json["due_at"]).tzinfo is not None
+    assert first.json["due_at"].endswith("+00:00")
     assert fetch_one(
         "SELECT COUNT(*), ease_factor, interval_days, repetitions, due_at, "
         "last_reviewed_at FROM review_state WHERE user_id = %s AND card_id = %s "
