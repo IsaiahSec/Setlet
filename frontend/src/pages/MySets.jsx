@@ -16,6 +16,14 @@ function MySets() {
   const [confirmId, setConfirmId] = useState(null);
   const [error, setError] = useState("");
 
+  const totalCards = sets.reduce(
+    (total, set) => total + (Number(set.card_count) || 0),
+    0
+  );
+  const sharedSets = sets.filter(
+    (set) => set.visibility === "public"
+  ).length;
+
   useEffect(() => {
     async function loadSets() {
       try {
@@ -75,9 +83,32 @@ function MySets() {
   return (
     <main className="mysets-page">
       <div className="mysets-container">
-        <header className="mysets-header">
-          <h1>My Study Sets</h1>
-          <p>Create and manage your flashcard collections.</p>
+        <header className="mysets-header mysets-dashboard-header">
+          <div className="mysets-hero-copy">
+            <span className="dashboard-kicker">Your learning space</span>
+            <h1>My Study Sets</h1>
+            <p>Create and manage your flashcard collections.</p>
+          </div>
+          <div className="mysets-overview" aria-label="Study overview">
+            <div className="mysets-stat">
+              <span className="mysets-stat-value">
+                {loading ? "—" : sets.length}
+              </span>
+              <span className="mysets-stat-label">Study sets</span>
+            </div>
+            <div className="mysets-stat">
+              <span className="mysets-stat-value">
+                {loading ? "—" : totalCards}
+              </span>
+              <span className="mysets-stat-label">Flashcards</span>
+            </div>
+            <div className="mysets-stat">
+              <span className="mysets-stat-value">
+                {loading ? "—" : sharedSets}
+              </span>
+              <span className="mysets-stat-label">Shared</span>
+            </div>
+          </div>
         </header>
 
         <section className="mysets-panel">
@@ -151,7 +182,7 @@ function MySets() {
                  </p>
                 )}
 
-                  <div className="mysets-actions">
+                  <div className="mysets-actions mysets-study-actions">
                     <Link
                       to={`/study/${set.id}`}
                       className="mysets-study-button"

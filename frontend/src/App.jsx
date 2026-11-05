@@ -35,14 +35,20 @@ function Navigation({ isLoggedIn, onLogout }) {
   }
 
   return (
-    <nav>
-      <Link to="/mysets">My Sets</Link>
-      {" | "}
-      <Link to="/public">Public Sets</Link>
-      {" | "}
-      <button type="button" onClick={handleLogout}>
-        Log out
-      </button>
+    <nav className="app-nav" aria-label="Main navigation">
+      <div className="app-nav-inner">
+        <Link className="app-brand" to="/mysets">
+          <span className="app-brand-mark" aria-hidden="true">S</span>
+          Setlet
+        </Link>
+        <div className="app-nav-links">
+          <Link to="/mysets">My Sets</Link>
+          <Link to="/public">Public Sets</Link>
+          <button type="button" onClick={handleLogout}>
+            Log out
+          </button>
+        </div>
+      </div>
     </nav>
   );
 }

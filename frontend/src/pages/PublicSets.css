@@ -47,3 +47,55 @@
 .publicsets-pagination span {
   font-weight: 500;
 }
+
+.publicsets-search {
+  margin-top: 8px;
+  padding-right: 14px;
+}
+
+.publicsets-pagination {
+  gap: 16px;
+  margin-top: 26px;
+}
+
+.publicsets-pagination button {
+  min-width: 96px;
+  min-height: 40px;
+  border: 1px solid #ddd3e9;
+  border-radius: 8px;
+  padding: 0 13px;
+  background: #f8f5fb;
+  color: #4f2683;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  transition: background-color 160ms ease, transform 160ms ease;
+}
+
+.publicsets-pagination button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  background: #eee7f6;
+}
+
+.publicsets-pagination button:disabled {
+  background: #f5f3f7;
+  color: #aaa4b0;
+  cursor: not-allowed;
+}
+
+.publicsets-pagination span {
+  color: #716b7b;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+@media (max-width: 420px) {
+  .publicsets-pagination {
+    gap: 8px;
+  }
+
+  .publicsets-pagination button {
+    min-width: 82px;
+    padding: 0 8px;
+  }
+}
