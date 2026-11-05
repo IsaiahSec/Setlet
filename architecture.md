@@ -80,7 +80,7 @@ Frontend tests use mocked API responses and do not verify database persistence.
 
 services/api.js provides frontend functions for communicating with backend API endpoints, including authentication, study sets, flashcards, and study review requests.
 
-The API service provides functions for authentication, study set management, flashcard management, and public set browsing. The `listPublicSets(query, page, pageSize)` function calls `GET /sets/public` with search and pagination parameters. The `getSet(id)` function retrieves individual study sets. API errors include HTTP status codes so the frontend can distinguish missing resources from other failures.
+The API service provides functions for authentication, study set management, flashcard management, and public set browsing. The `listPublicSets(query, page, pageSize)` function calls `GET /sets/public` with search and pagination parameters, and may include owner/shared-date filters as needed. The `getSet(id)` function retrieves individual study sets. API errors include HTTP status codes so the frontend can distinguish missing resources from other failures.
 
 ---
 
@@ -103,9 +103,11 @@ The initial backend structure is organized into three primary areas, mirroring t
 The backend includes authentication and owner-scoped study-set mutations, with table-specific raw SQL models and service validation. Individual set reads and review endpoints are visible to the owner and to other users only when the set is public. Review progress is scoped to the authenticated user.
 
 Authenticated users can list other users' public sets with `GET /sets/public`,
-optionally searching titles and descriptions by keyword and paginating results.
-The response includes set metadata, card counts, and the owner's email prefix,
-but not card contents or full email addresses.
+optionally searching titles and descriptions by keyword, filtering by owner and
+shared date range, and paginating results. `GET /sets` also supports the same
+search-term matching for the caller's own sets without pagination.
+The response includes set metadata, card counts, `shared_at`, and the owner's
+email prefix, but not card contents or full email addresses.
 The `page` parameter is limited to values from 1 through 10,000. Datetime
 fields returned by backend JSON responses use ISO 8601 with a UTC offset.
 
@@ -126,7 +128,7 @@ PostgreSQL, hosted on Render alongside the backend, accessed via `psycopg2` rath
 MVP tables, per the project proposal: `users`, `study_sets`, `cards`, `review_state`, `review_logs`. Two additional tables — `feedback_limits` and `notes` — are part of the full proposal scope but support post-MVP features, so their schemas will be implemented after the MVP milestone. `db.py` connects using the `DATABASE_URL` environment variable and creates tables on startup if they do not exist. Currently implemented:
 
 - `users` - `id` (serial primary key), `email` (unique), `password_hash` (bcrypt), `created_at`
-- `study_sets` - `id`, `owner_id` (references `users`), `title`, `description`, `visibility`, `created_at`, `updated_at`
+- `study_sets` - `id`, `owner_id` (references `users`), `title`, `description`, `visibility`, `shared_at` (nullable; set when shared publicly), `created_at`, `updated_at`
 - `cards` - `id`, `set_id` (references `study_sets` with `ON DELETE CASCADE`), `front`, `back`, `created_at`, `updated_at`; indexed by `set_id`
 - `review_state`
   - `user_id` and `card_id` reference `users` and `cards` with `ON DELETE
@@ -148,7 +150,7 @@ and counts for the entire set. `POST /cards/<card_id>/review` validates a rating
 from 1 to 4, calculates the next schedule, and writes the state and review log
 atomically.
 
-The authenticated set API supports creating, updating, and deleting cards under `/sets/<set_id>/cards`. Only the set owner can manipulate sets and cards. Owners can switch set visibility between `private` and `public`; individual set reads include cards ordered by ID, the owner's name, and whether the viewer is the owner. Set lists remain owner-only and include a `card_count`.
+The authenticated set API supports creating, updating, and deleting cards under `/sets/<set_id>/cards`. Only the set owner can manipulate sets and cards. Owners can switch set visibility between `private` and `public`; switching to public sets `shared_at`, and switching back to private clears it. Individual set reads include cards ordered by ID, the owner's name, and whether the viewer is the owner. Set lists remain owner-only and include a `card_count`.
 
 ---
 

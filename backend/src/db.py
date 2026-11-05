@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS study_sets (
     title TEXT NOT NULL,
     description TEXT NOT NULL DEFAULT '',
     visibility TEXT NOT NULL DEFAULT 'private' CHECK (visibility IN ('private', 'public')),
+    shared_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 )
@@ -79,6 +80,15 @@ def init_db():
         with conn, conn.cursor() as cur:
             cur.execute(USERS_TABLE_SQL)
             cur.execute(STUDY_SETS_TABLE_SQL)
+            cur.execute(
+                "ALTER TABLE study_sets "
+                "ADD COLUMN IF NOT EXISTS shared_at TIMESTAMPTZ"
+            )
+            cur.execute(
+                "UPDATE study_sets "
+                "SET shared_at = updated_at "
+                "WHERE visibility = 'public' AND shared_at IS NULL"
+            )
             cur.execute(CARDS_TABLE_SQL)
             cur.execute(REVIEW_STATE_TABLE_SQL)
             cur.execute(REVIEW_LOGS_TABLE_SQL)

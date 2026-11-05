@@ -1,5 +1,7 @@
 """Validation and business logic for study sets."""
 
+from datetime import date
+
 from src.models import study_sets
 
 
@@ -74,13 +76,68 @@ def _validate_page(value, default, minimum, maximum=None):
     return value
 
 
-def list_public_sets(viewer_id, query, page, page_size):
+def _parse_search_terms(query):
     query = (query or "").strip()
     _reject_nul("Search query", query)
     if len(query) > 100:
         raise ValidationError("Search query must be at most 100 characters")
+    return query.split()[:5]
+
+
+def _validate_owner_id(owner_id):
+    if owner_id is None:
+        return None
+    try:
+        owner_id = int(owner_id)
+    except (TypeError, ValueError):
+        raise ValidationError("owner_id must be a positive integer")
+    if owner_id <= 0:
+        raise ValidationError("owner_id must be a positive integer")
+    return owner_id
+
+
+def _validate_date(value, field_name):
+    if value is None:
+        return None
+    try:
+        return date.fromisoformat(value)
+    except (TypeError, ValueError):
+        raise ValidationError(f"{field_name} must be in YYYY-MM-DD format")
+
+
+def list_sets(owner_id, query):
+    terms = _parse_search_terms(query)
+    return study_sets.list_sets(owner_id, terms)
+
+
+def list_public_sets(
+    viewer_id,
+    query,
+    page,
+    page_size,
+    owner_id=None,
+    shared_from=None,
+    shared_to=None,
+):
+    terms = _parse_search_terms(query)
     page = _validate_page(page, 1, 1, 10000)
     page_size = _validate_page(page_size, 20, 1, 50)
-    terms = query.split()[:5]
-    sets, total = study_sets.search_public_sets(viewer_id, terms, page, page_size)
+    owner_id = _validate_owner_id(owner_id)
+    shared_from = _validate_date(shared_from, "shared_from")
+    shared_to = _validate_date(shared_to, "shared_to")
+    if (
+        shared_from is not None
+        and shared_to is not None
+        and shared_from > shared_to
+    ):
+        raise ValidationError("shared_from must be on or before shared_to")
+    sets, total = study_sets.search_public_sets(
+        viewer_id,
+        terms,
+        page,
+        page_size,
+        owner_id=owner_id,
+        shared_from=shared_from,
+        shared_to=shared_to,
+    )
     return {"sets": sets, "page": page, "page_size": page_size, "total": total}
