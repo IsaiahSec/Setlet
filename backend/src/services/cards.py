@@ -33,3 +33,16 @@ def update_card(owner_id, set_id, card_id, data):
         if field in data:
             fields[field] = _validate_text(field, data[field])
     return cards.update_card(owner_id, set_id, card_id, fields)
+
+
+def reorder_cards(owner_id, set_id, data):
+    _validate_body(data)
+    card_ids = data.get("card_ids")
+    if not isinstance(card_ids, list):
+        raise ValidationError("card_ids must be a list")
+    if not all(type(card_id) is int for card_id in card_ids):
+        raise ValidationError("card_ids must be a list of integers")
+    try:
+        return cards.reorder_cards(owner_id, set_id, card_ids)
+    except ValueError as error:
+        raise ValidationError(str(error)) from error

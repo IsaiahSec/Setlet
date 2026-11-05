@@ -129,7 +129,7 @@ MVP tables, per the project proposal: `users`, `study_sets`, `cards`, `review_st
 
 - `users` - `id` (serial primary key), `email` (unique), `password_hash` (bcrypt), `created_at`
 - `study_sets` - `id`, `owner_id` (references `users`), `title`, `description`, `visibility`, `shared_at` (nullable; set when shared publicly), `created_at`, `updated_at`
-- `cards` - `id`, `set_id` (references `study_sets` with `ON DELETE CASCADE`), `front`, `back`, `created_at`, `updated_at`; indexed by `set_id`
+- `cards` - `id`, `set_id` (references `study_sets` with `ON DELETE CASCADE`), `position` (per-set order), `front`, `back`, `created_at`, `updated_at`; indexed by `set_id`
 - `review_state`
   - `user_id` and `card_id` reference `users` and `cards` with `ON DELETE
     CASCADE` and form the composite primary key.
@@ -150,7 +150,7 @@ and counts for the entire set. `POST /cards/<card_id>/review` validates a rating
 from 1 to 4, calculates the next schedule, and writes the state and review log
 atomically.
 
-The authenticated set API supports creating, updating, and deleting cards under `/sets/<set_id>/cards`. Only the set owner can manipulate sets and cards. Owners can switch set visibility between `private` and `public`; switching to public sets `shared_at`, and switching back to private clears it. Individual set reads include cards ordered by ID, the owner's name, and whether the viewer is the owner. Set lists remain owner-only and include a `card_count`.
+The authenticated set API supports creating, updating, deleting, and reordering cards under `/sets/<set_id>/cards` and `/sets/<set_id>/cards/order`. Only the set owner can manipulate sets and cards. Owners can switch set visibility between `private` and `public`; switching to public sets `shared_at`, and switching back to private clears it. Individual set reads include cards ordered by `position`, then `id`, plus the owner's name and whether the viewer is the owner. New cards are appended to the end of each set's card order. Set lists remain owner-only and include a `card_count`.
 
 ---
 

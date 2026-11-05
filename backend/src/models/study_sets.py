@@ -37,7 +37,8 @@ def _set_from_row(row, include_owner=False):
 
 def _include_cards(cur, set_id, study_set):
     cur.execute(
-        "SELECT id, front, back FROM cards WHERE set_id = %s ORDER BY id ASC",
+        "SELECT id, front, back FROM cards WHERE set_id = %s "
+        "ORDER BY position ASC, id ASC",
         (set_id,),
     )
     study_set["cards"] = [
