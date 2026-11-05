@@ -96,6 +96,16 @@ describe("Set Editor", () => {
     expect(api.getSet).toHaveBeenCalledWith("2");
   });
 
+  it("provides a Flip through link for the current set", async () => {
+    renderEditor();
+
+    const link = await screen.findByRole("link", {
+      name: "Flip through",
+    });
+
+    expect(link.getAttribute("href")).toBe("/flip/2");
+  });
+
   it("updates the study set title", async () => {
     renderEditor();
 

@@ -1,0 +1,61 @@
+.flip-unsaved-message {
+  color: #555;
+  background-color: #f7f5fa;
+  border-left: 3px solid #4f2683;
+  padding: 10px 12px;
+  margin: 0 0 20px;
+}
+
+.flip-toolbar,
+.flip-navigation {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.flip-toolbar .study-progress {
+  margin: 0;
+}
+
+.flip-shuffle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #333;
+  cursor: pointer;
+}
+
+.flip-shuffle input {
+  accent-color: #4f2683;
+  width: 16px;
+  height: 16px;
+}
+
+.flip-navigation {
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.flip-navigation .study-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.flip-navigation .study-button:focus-visible,
+.flip-shuffle input:focus-visible {
+  outline: 2px solid #4f2683;
+  outline-offset: 3px;
+}
+
+@media (max-width: 600px) {
+  .flip-toolbar {
+    align-items: flex-start;
+  }
+
+  .flip-navigation .study-button {
+    flex: 1;
+    min-width: 120px;
+  }
+}

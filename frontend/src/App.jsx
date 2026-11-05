@@ -15,6 +15,7 @@ import MySets from "./pages/MySets";
 import PublicSets from "./pages/PublicSets";
 import SetEditor from "./pages/SetEditor";
 import StudyReview from "./pages/StudyReview";
+import FlipThrough from "./pages/FlipThrough";
 import PublicSetView from "./pages/PublicSetView";
 
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -98,6 +99,7 @@ function App() {
           <Route path="/public" element={<PublicSets />} />
           <Route path="/public/:setId" element={<PublicSetView />} />
           <Route path="/study/:setId" element={<StudyReview />} />
+          <Route path="/flip/:setId" element={<FlipThrough />} />
         </Route>
 
         {/* unknown paths redirect home */}

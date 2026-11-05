@@ -178,7 +178,7 @@ describe("MySets page", () => {
     expect(screen.queryByText("Public")).toBeNull();
   });
 
-  test("displays a Study link for each set", async () => {
+  test("displays Study and Flip through links for each set", async () => {
     listSets.mockResolvedValue([
       {
         id: 1,
@@ -203,6 +203,14 @@ describe("MySets page", () => {
     expect(studyLinks).toHaveLength(2);
     expect(studyLinks[0].getAttribute("href")).toBe("/study/1");
     expect(studyLinks[1].getAttribute("href")).toBe("/study/2");
+
+    const flipLinks = screen.getAllByRole("link", {
+      name: "Flip through",
+    });
+
+    expect(flipLinks).toHaveLength(2);
+    expect(flipLinks[0].getAttribute("href")).toBe("/flip/1");
+    expect(flipLinks[1].getAttribute("href")).toBe("/flip/2");
   });
 
 });

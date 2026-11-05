@@ -254,6 +254,14 @@ async function handleVisibilityChange(event) {
     Study
   </Link>
 )}
+          {studySet && (
+            <Link
+              to={`/flip/${setId}`}
+              className="seteditor-study-button"
+            >
+              Flip through
+            </Link>
+          )}
 
           {studySet && (
   <div

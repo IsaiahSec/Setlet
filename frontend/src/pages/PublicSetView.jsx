@@ -91,9 +91,20 @@ function PublicSetView() {
                 by {studySet.owner_name || "Unknown"}
               </p>
 
-              <Link to={`/study/${setId}`}>
-                Study This Set
-              </Link>
+              <div className="mysets-actions">
+                <Link
+                  to={`/study/${setId}`}
+                  className="mysets-study-button"
+                >
+                  Study This Set
+                </Link>
+                <Link
+                  to={`/flip/${setId}`}
+                  className="mysets-study-button"
+                >
+                  Flip through
+                </Link>
+              </div>
             </section>
 
             <section className="mysets-panel">
