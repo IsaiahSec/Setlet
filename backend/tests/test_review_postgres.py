@@ -504,8 +504,11 @@ def test_study_and_review_require_authentication(pg_client, make_user):
     ).status_code == 401
 
 
-def test_history_returns_zero_filled_ranges_for_user_without_reviews(pg_client, make_user):
+def test_history_returns_zero_filled_ranges_for_user_without_reviews(
+    pg_client, make_user, monkeypatch
+):
     _, headers = make_user("history-empty@example.com", "correct horse")
+    monkeypatch.setattr(review_service, "utcnow", lambda: NOW)
 
     response = pg_client.get("/history", headers=headers)
 
