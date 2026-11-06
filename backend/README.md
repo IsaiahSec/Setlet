@@ -63,12 +63,19 @@ refuse to connect unless the database name ends in `_test`.
 - `POST /sets/<id>/cards` - add a card to an owned set (`front` and `back`, each 1–2,000 trimmed characters).
 - `PATCH /sets/<id>/cards/<card_id>` - update a card's `front` and/or `back`.
 - `DELETE /sets/<id>/cards/<card_id>` - delete a card from an owned set.
+- `PUT /sets/<id>/cards/order` - owner-only card reorder. Body must be `{"card_ids": [ ... ]}` containing every card ID in the set exactly once.
 - `GET /sets/<id>/study` - get the caller's due and new cards, plus set-wide counts.
 - `POST /cards/<card_id>/review` - rate a visible card from 1 (Again) to 4 (Easy).
 
-`GET /sets/<id>` includes its cards ordered by ID. Non-owners can read public
-sets but cannot update them or their cards. `GET /sets` remains owner-only and
-includes a `card_count` for each set. Deleting a set cascades to its cards.
+`cards` include an internal per-set `position` used for ordering. `GET
+/sets/<id>` returns cards ordered by `position`, then `id`. New cards are
+appended to the end of their set. Non-owners can read public sets but cannot
+update them or their cards. `PUT /sets/<id>/cards/order` returns
+`{"error":"Set not found"}` when the set is missing or not owned by the caller
+(including public sets owned by another user), and returns `400` if `card_ids`
+does not contain each card in the set exactly once. `GET /sets` remains
+owner-only and includes a `card_count` for each set. Deleting a set cascades
+to its cards.
 
 Study progress is stored separately for each user. The study queue lists due
 cards first, then at most 10 new cards, with a maximum of 50 cards total.

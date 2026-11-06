@@ -213,6 +213,41 @@ def test_public_set_review_state_is_isolated_between_users(
     ) == (1,)
 
 
+def test_public_study_queue_new_cards_follow_owner_order(pg_client, make_user):
+    _, owner_headers = make_user("queue-order-owner@example.com", "correct horse")
+    _, viewer_headers = make_user("queue-order-viewer@example.com", "correct horse")
+    study_set = create_set(pg_client, owner_headers)
+    first = create_card(pg_client, owner_headers, study_set["id"], front="One")
+    second = create_card(pg_client, owner_headers, study_set["id"], front="Two")
+    third = create_card(pg_client, owner_headers, study_set["id"], front="Three")
+    assert (
+        pg_client.put(
+            f"/sets/{study_set['id']}/cards/order",
+            headers=owner_headers,
+            json={"card_ids": [third["id"], first["id"], second["id"]]},
+        ).status_code
+        == 200
+    )
+    assert (
+        pg_client.patch(
+            f"/sets/{study_set['id']}",
+            headers=owner_headers,
+            json={"visibility": "public"},
+        ).status_code
+        == 200
+    )
+
+    response = pg_client.get(f"/sets/{study_set['id']}/study", headers=viewer_headers)
+
+    assert response.status_code == 200
+    assert [card["id"] for card in response.json["cards"]] == [
+        third["id"],
+        first["id"],
+        second["id"],
+    ]
+    assert all(card["is_new"] for card in response.json["cards"])
+
+
 def test_reviewed_card_leaves_queue_until_due_again(
     pg_client, make_user, monkeypatch
 ):

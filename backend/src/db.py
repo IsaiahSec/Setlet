@@ -34,6 +34,7 @@ CARDS_TABLE_SQL = """
 CREATE TABLE IF NOT EXISTS cards (
     id SERIAL PRIMARY KEY,
     set_id INTEGER NOT NULL REFERENCES study_sets(id) ON DELETE CASCADE,
+    position INTEGER,
     front TEXT NOT NULL,
     back TEXT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -90,6 +91,21 @@ def init_db():
                 "WHERE visibility = 'public' AND shared_at IS NULL"
             )
             cur.execute(CARDS_TABLE_SQL)
+            cur.execute(
+                "ALTER TABLE cards "
+                "ADD COLUMN IF NOT EXISTS position INTEGER"
+            )
+            cur.execute(
+                "WITH ranked AS ("
+                "SELECT id, ROW_NUMBER() OVER (PARTITION BY set_id ORDER BY id ASC) "
+                "AS new_position "
+                "FROM cards WHERE position IS NULL"
+                ") "
+                "UPDATE cards AS c "
+                "SET position = ranked.new_position "
+                "FROM ranked "
+                "WHERE c.id = ranked.id"
+            )
             cur.execute(REVIEW_STATE_TABLE_SQL)
             cur.execute(REVIEW_LOGS_TABLE_SQL)
             cur.execute(
