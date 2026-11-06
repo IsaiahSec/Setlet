@@ -86,8 +86,9 @@ export function clearToken() {
 }
 
  // get the current user's study sets
-export function listSets() {
-  return request("/sets");
+export function listSets(query = "") {
+  const params = new URLSearchParams({ q: query });
+  return request(`/sets?${params.toString()}`);
 }
 
 // create a new study set
@@ -155,13 +156,17 @@ export function reviewCard(cardId, rating) {
   });
 }
 
-// Get public study sets with search and pagination
-export function listPublicSets(query = "", page = 1, pageSize = 10) {
+// Get public study sets with search, filters, and pagination
+export function listPublicSets(query = "", page = 1, pageSize = 10, filters = {}) {
   const params = new URLSearchParams({
     q: query,
     page: String(page),
     page_size: String(pageSize),
   });
+
+  if (filters.ownerId) params.set("owner_id", String(filters.ownerId));
+  if (filters.sharedFrom) params.set("shared_from", filters.sharedFrom);
+  if (filters.sharedTo) params.set("shared_to", filters.sharedTo);
 
   return request(`/sets/public?${params.toString()}`);
 }

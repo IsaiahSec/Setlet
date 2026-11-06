@@ -1,6 +1,14 @@
 
 import { beforeEach, afterEach, describe, test, expect, vi } from "vitest";
-import { login, signup, getToken, setToken, request } from "./api";
+import {
+    login,
+    signup,
+    getToken,
+    setToken,
+    request,
+    listSets,
+    listPublicSets,
+} from "./api";
 
 // reset before each test
 beforeEach(() => {
@@ -93,4 +101,26 @@ describe("API authentication", () => {
         );
     });
 
+});
+
+describe("study set listing API", () => {
+    test("passes search and public filter query parameters", async () => {
+        fetch.mockResolvedValue({
+            ok: true,
+            status: 200,
+            json: async () => ({}),
+        });
+
+        await listSets("Biology chapter");
+        await listPublicSets("Biology", 2, 10, {
+            ownerId: 7,
+            sharedFrom: "2025-01-01",
+            sharedTo: "2025-02-01",
+        });
+
+        expect(fetch.mock.calls[0][0]).toMatch(/\/sets\?q=Biology\+chapter$/);
+        expect(fetch.mock.calls[1][0]).toMatch(
+            /\/sets\/public\?q=Biology&page=2&page_size=10&owner_id=7&shared_from=2025-01-01&shared_to=2025-02-01$/
+        );
+    });
 });

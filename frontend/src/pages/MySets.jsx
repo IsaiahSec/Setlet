@@ -8,6 +8,8 @@ function MySets() {
   const navigate = useNavigate();
 
   const [sets, setSets] = useState([]);
+  const [search, setSearch] = useState("");
+  const [query, setQuery] = useState("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(true);
@@ -25,19 +27,37 @@ function MySets() {
   ).length;
 
   useEffect(() => {
+    const timer = setTimeout(() => setQuery(search.trim()), 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  useEffect(() => {
+    let active = true;
+
     async function loadSets() {
+      setLoading(true);
+      setError("");
+
       try {
-        const data = await listSets();
+        const data = await listSets(query);
+        if (!active) return;
         setSets(Array.isArray(data) ? data : data.sets || []);
       } catch (err) {
-        setError(err.message);
+        if (active) {
+          setError(err.message);
+          setSets([]);
+        }
       } finally {
-        setLoading(false);
+        if (active) setLoading(false);
       }
     }
 
     loadSets();
-  }, []);
+
+    return () => {
+      active = false;
+    };
+  }, [query]);
 
   async function handleCreate(event) {
     event.preventDefault();
@@ -152,10 +172,24 @@ function MySets() {
         <section className="mysets-panel">
           <h2>Your Sets</h2>
 
+          <label htmlFor="mysets-search">Search your sets</label>
+          <input
+            id="mysets-search"
+            className="publicsets-search"
+            type="search"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search by title or description..."
+          />
+
           {loading ? (
             <p>Loading your study sets...</p>
           ) : sets.length === 0 ? (
-            <p>No study sets yet. Create your first set above!</p>
+            <p>
+              {query
+                ? "No study sets match your search."
+                : "No study sets yet. Create your first set above!"}
+            </p>
           ) : (
             <div className="mysets-grid">
               {sets.map((set) => (
