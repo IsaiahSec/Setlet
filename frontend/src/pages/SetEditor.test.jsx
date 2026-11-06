@@ -17,6 +17,7 @@ vi.mock("../services/api", () => ({
   createCard: vi.fn(),
   updateCard: vi.fn(),
   deleteCard: vi.fn(),
+  reorderCards: vi.fn(),
 }));
 
 const sampleSet = {
@@ -40,6 +41,12 @@ function renderEditor() {
       </Routes>
     </MemoryRouter>
   );
+}
+
+function getCardFrontOrder() {
+  return Array.from(
+    document.querySelectorAll(".seteditor-card textarea[id^='front-']")
+  ).map((field) => field.value);
 }
 
 afterEach(() => {
@@ -73,6 +80,7 @@ beforeEach(() => {
   });
 
   api.deleteCard.mockResolvedValue({});
+  api.reorderCards.mockResolvedValue({});
 });
 
 describe("Set Editor", () => {
@@ -228,6 +236,100 @@ describe("Set Editor", () => {
     } finally {
       vi.unstubAllGlobals();
     }
+  });
+
+  it("sends the complete reordered card IDs and updates the order after success", async () => {
+    api.getSet.mockResolvedValue({
+      ...sampleSet,
+      cards: [
+        { id: 1, front: "First", back: "Answer 1" },
+        { id: 2, front: "Second", back: "Answer 2" },
+        { id: 3, front: "Third", back: "Answer 3" },
+      ],
+    });
+
+    let finishReorder;
+    api.reorderCards.mockReturnValue(
+      new Promise((resolve) => {
+        finishReorder = resolve;
+      })
+    );
+
+    renderEditor();
+    await screen.findByDisplayValue("First");
+
+    const moveDownButtons = screen.getAllByRole("button", {
+      name: "Move down",
+    });
+    fireEvent.click(moveDownButtons[0]);
+
+    expect(api.reorderCards).toHaveBeenCalledWith("2", [2, 1, 3]);
+    expect(getCardFrontOrder()).toEqual(["First", "Second", "Third"]);
+    expect(
+      screen.getAllByRole("button", { name: "Move up" })
+        .every((button) => button.disabled)
+    ).toBe(true);
+    expect(
+      screen.getAllByRole("button", { name: "Move down" })
+        .every((button) => button.disabled)
+    ).toBe(true);
+
+    finishReorder({});
+
+    await waitFor(() => {
+      expect(getCardFrontOrder()).toEqual(["Second", "First", "Third"]);
+    });
+    expect(
+      await screen.findByText("Card order updated successfully.")
+    ).toBeTruthy();
+  });
+
+  it("preserves card order and shows an error when reordering fails", async () => {
+    api.getSet.mockResolvedValue({
+      ...sampleSet,
+      cards: [
+        { id: 1, front: "First", back: "Answer 1" },
+        { id: 2, front: "Second", back: "Answer 2" },
+      ],
+    });
+    api.reorderCards.mockRejectedValue(new Error("Unable to reorder cards"));
+
+    renderEditor();
+    await screen.findByDisplayValue("First");
+    fireEvent.click(
+      screen.getAllByRole("button", { name: "Move down" })[0]
+    );
+
+    expect(await screen.findByRole("alert")).toHaveProperty(
+      "textContent",
+      "Unable to reorder cards"
+    );
+    expect(getCardFrontOrder()).toEqual(["First", "Second"]);
+  });
+
+  it("disables move up and down on the first and last cards", async () => {
+    api.getSet.mockResolvedValue({
+      ...sampleSet,
+      cards: [
+        { id: 1, front: "First", back: "Answer 1" },
+        { id: 2, front: "Second", back: "Answer 2" },
+      ],
+    });
+
+    renderEditor();
+    await screen.findByDisplayValue("First");
+
+    const moveUpButtons = screen.getAllByRole("button", {
+      name: "Move up",
+    });
+    const moveDownButtons = screen.getAllByRole("button", {
+      name: "Move down",
+    });
+
+    expect(moveUpButtons[0].disabled).toBe(true);
+    expect(moveDownButtons[0].disabled).toBe(false);
+    expect(moveUpButtons[1].disabled).toBe(false);
+    expect(moveDownButtons[1].disabled).toBe(true);
   });
 
   it("shows an error when loading fails", async () => {

@@ -1,6 +1,13 @@
 
 import { beforeEach, afterEach, describe, test, expect, vi } from "vitest";
-import { login, signup, getToken, setToken, request } from "./api";
+import {
+    login,
+    signup,
+    getToken,
+    setToken,
+    request,
+    reorderCards,
+} from "./api";
 
 // reset before each test
 beforeEach(() => {
@@ -93,4 +100,24 @@ describe("API authentication", () => {
         );
     });
 
+});
+
+describe("card reordering API", () => {
+    test("sends the complete card order with PUT", async () => {
+        fetch.mockResolvedValue({
+            ok: true,
+            status: 200,
+            json: async () => ({ cards: [] }),
+        });
+
+        await reorderCards(2, [3, 1, 2]);
+
+        expect(fetch).toHaveBeenCalledWith(
+            expect.stringMatching(/\/sets\/2\/cards\/order$/),
+            expect.objectContaining({
+                method: "PUT",
+                body: JSON.stringify({ card_ids: [3, 1, 2] }),
+            })
+        );
+    });
 });
