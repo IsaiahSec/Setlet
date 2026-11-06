@@ -498,6 +498,223 @@ def test_study_and_review_require_authentication(pg_client, make_user):
     card = create_card(pg_client, headers, study_set["id"])
 
     assert pg_client.get(f"/sets/{study_set['id']}/study").status_code == 401
+    assert pg_client.get("/history").status_code == 401
     assert pg_client.post(
         f"/cards/{card['id']}/review", json={"rating": 3}
     ).status_code == 401
+
+
+def test_history_returns_zero_filled_ranges_for_user_without_reviews(pg_client, make_user):
+    _, headers = make_user("history-empty@example.com", "correct horse")
+
+    response = pg_client.get("/history", headers=headers)
+
+    assert response.status_code == 200
+    assert response.json["totals"] == {
+        "reviews": 0,
+        "cards_reviewed": 0,
+        "sets_studied": 0,
+    }
+    assert len(response.json["last_30_days"]) == 30
+    assert all(entry["reviews"] == 0 for entry in response.json["last_30_days"])
+    assert response.json["last_30_days"][0]["date"] == (NOW.date() - timedelta(days=29)).isoformat()
+    assert response.json["last_30_days"][-1]["date"] == NOW.date().isoformat()
+    assert response.json["upcoming"]["overdue"] == 0
+    assert len(response.json["upcoming"]["days"]) == 14
+    assert all(entry["due"] == 0 for entry in response.json["upcoming"]["days"])
+    assert response.json["upcoming"]["days"][0]["date"] == (
+        NOW.date() + timedelta(days=1)
+    ).isoformat()
+    assert response.json["upcoming"]["days"][-1]["date"] == (
+        NOW.date() + timedelta(days=14)
+    ).isoformat()
+
+
+def test_history_totals_daily_and_upcoming_counts_are_correct(
+    pg_client, make_user, monkeypatch
+):
+    user_id, headers = make_user("history-counts@example.com", "correct horse")
+    monkeypatch.setattr(review_service, "utcnow", lambda: NOW)
+    first_set = create_set(pg_client, headers, title="History one")
+    second_set = create_set(pg_client, headers, title="History two")
+    first_card = create_card(pg_client, headers, first_set["id"], front="A")
+    second_card = create_card(pg_client, headers, first_set["id"], front="B")
+    third_card = create_card(pg_client, headers, second_set["id"], front="C")
+
+    for card_id in (first_card["id"], first_card["id"], second_card["id"], third_card["id"]):
+        response = pg_client.post(
+            f"/cards/{card_id}/review", headers=headers, json={"rating": 3}
+        )
+        assert response.status_code == 200
+
+    conn = get_connection()
+    try:
+        with conn, conn.cursor() as cursor:
+            cursor.execute(
+                "SELECT id FROM review_logs WHERE user_id = %s ORDER BY id",
+                (user_id,),
+            )
+            log_ids = [row[0] for row in cursor.fetchall()]
+            reviewed_at_values = (
+                NOW - timedelta(days=29),
+                NOW,
+                NOW - timedelta(days=1),
+                NOW - timedelta(days=1, hours=2),
+            )
+            for review_log_id, reviewed_at in zip(log_ids, reviewed_at_values):
+                cursor.execute(
+                    "UPDATE review_logs SET reviewed_at = %s WHERE id = %s",
+                    (reviewed_at, review_log_id),
+                )
+
+            cursor.execute(
+                "UPDATE review_state SET due_at = %s WHERE user_id = %s AND card_id = %s",
+                (NOW - timedelta(hours=1), user_id, first_card["id"]),
+            )
+            cursor.execute(
+                "UPDATE review_state SET due_at = %s WHERE user_id = %s AND card_id = %s",
+                (NOW + timedelta(days=1, hours=2), user_id, second_card["id"]),
+            )
+            cursor.execute(
+                "UPDATE review_state SET due_at = %s WHERE user_id = %s AND card_id = %s",
+                (NOW + timedelta(days=14, hours=3), user_id, third_card["id"]),
+            )
+    finally:
+        conn.close()
+
+    response = pg_client.get("/history", headers=headers)
+
+    assert response.status_code == 200
+    assert response.json["totals"] == {
+        "reviews": 4,
+        "cards_reviewed": 3,
+        "sets_studied": 2,
+    }
+    by_day = {entry["date"]: entry["reviews"] for entry in response.json["last_30_days"]}
+    assert by_day[(NOW.date() - timedelta(days=29)).isoformat()] == 1
+    assert by_day[(NOW.date() - timedelta(days=1)).isoformat()] == 2
+    assert by_day[NOW.date().isoformat()] == 1
+    assert response.json["upcoming"]["overdue"] == 1
+    due_by_day = {entry["date"]: entry["due"] for entry in response.json["upcoming"]["days"]}
+    assert due_by_day[(NOW.date() + timedelta(days=1)).isoformat()] == 1
+    assert due_by_day[(NOW.date() + timedelta(days=14)).isoformat()] == 1
+
+
+def test_history_is_isolated_between_users_on_same_public_set(
+    pg_client, make_user, monkeypatch
+):
+    _, owner_headers = make_user("history-owner@example.com", "correct horse")
+    first_user_id, first_headers = make_user(
+        "history-first@example.com", "correct horse"
+    )
+    second_user_id, second_headers = make_user(
+        "history-second@example.com", "correct horse"
+    )
+    monkeypatch.setattr(review_service, "utcnow", lambda: NOW)
+    study_set = create_set(pg_client, owner_headers, title="Shared history")
+    card = create_card(pg_client, owner_headers, study_set["id"], front="shared")
+    pg_client.patch(
+        f"/sets/{study_set['id']}",
+        headers=owner_headers,
+        json={"visibility": "public"},
+    )
+
+    assert (
+        pg_client.post(f"/cards/{card['id']}/review", headers=first_headers, json={"rating": 3}).status_code
+        == 200
+    )
+    assert (
+        pg_client.post(f"/cards/{card['id']}/review", headers=second_headers, json={"rating": 2}).status_code
+        == 200
+    )
+
+    conn = get_connection()
+    try:
+        with conn, conn.cursor() as cursor:
+            cursor.execute(
+                "UPDATE review_logs SET reviewed_at = %s WHERE user_id = %s",
+                (NOW - timedelta(days=5), first_user_id),
+            )
+            cursor.execute(
+                "UPDATE review_logs SET reviewed_at = %s WHERE user_id = %s",
+                (NOW - timedelta(days=1), second_user_id),
+            )
+            cursor.execute(
+                "UPDATE review_state SET due_at = %s WHERE user_id = %s",
+                (NOW - timedelta(minutes=1), first_user_id),
+            )
+            cursor.execute(
+                "UPDATE review_state SET due_at = %s WHERE user_id = %s",
+                (NOW + timedelta(days=2), second_user_id),
+            )
+    finally:
+        conn.close()
+
+    first_history = pg_client.get("/history", headers=first_headers)
+    second_history = pg_client.get("/history", headers=second_headers)
+
+    assert first_history.status_code == 200
+    assert second_history.status_code == 200
+    assert first_history.json["totals"] == {
+        "reviews": 1,
+        "cards_reviewed": 1,
+        "sets_studied": 1,
+    }
+    assert second_history.json["totals"] == {
+        "reviews": 1,
+        "cards_reviewed": 1,
+        "sets_studied": 1,
+    }
+    assert first_history.json["upcoming"]["overdue"] == 1
+    assert second_history.json["upcoming"]["overdue"] == 0
+    first_by_day = {
+        entry["date"]: entry["reviews"] for entry in first_history.json["last_30_days"]
+    }
+    second_by_day = {
+        entry["date"]: entry["reviews"] for entry in second_history.json["last_30_days"]
+    }
+    assert first_by_day[(NOW.date() - timedelta(days=5)).isoformat()] == 1
+    assert second_by_day[(NOW.date() - timedelta(days=1)).isoformat()] == 1
+
+
+def test_history_totals_drop_after_deleting_card_or_set(
+    pg_client, make_user, monkeypatch
+):
+    _, headers = make_user("history-cascade@example.com", "correct horse")
+    monkeypatch.setattr(review_service, "utcnow", lambda: NOW)
+    study_set = create_set(pg_client, headers, title="Cascade history")
+    first_card = create_card(pg_client, headers, study_set["id"], front="first")
+    second_card = create_card(pg_client, headers, study_set["id"], front="second")
+
+    for card in (first_card, second_card):
+        response = pg_client.post(
+            f"/cards/{card['id']}/review", headers=headers, json={"rating": 3}
+        )
+        assert response.status_code == 200
+
+    before_delete = pg_client.get("/history", headers=headers)
+    assert before_delete.json["totals"] == {
+        "reviews": 2,
+        "cards_reviewed": 2,
+        "sets_studied": 1,
+    }
+
+    deleted_card = pg_client.delete(
+        f"/sets/{study_set['id']}/cards/{first_card['id']}", headers=headers
+    )
+    assert deleted_card.status_code == 204
+    after_card_delete = pg_client.get("/history", headers=headers)
+    assert after_card_delete.json["totals"] == {
+        "reviews": 1,
+        "cards_reviewed": 1,
+        "sets_studied": 1,
+    }
+
+    deleted_set = pg_client.delete(f"/sets/{study_set['id']}", headers=headers)
+    assert deleted_set.status_code == 204
+    after_set_delete = pg_client.get("/history", headers=headers)
+    assert after_set_delete.json["totals"] == {
+        "reviews": 0,
+        "cards_reviewed": 0,
+        "sets_studied": 0,
+    }
