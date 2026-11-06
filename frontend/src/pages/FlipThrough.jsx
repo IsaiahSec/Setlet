@@ -207,9 +207,21 @@ function FlipThrough() {
             </p>
 
             <div className="flip-toolbar">
-              <p className="study-progress" aria-live="polite">
-                {currentIndex + 1} of {cards.length}
-              </p>
+              <div className="flip-progress-block">
+                <p className="study-progress" aria-live="polite">
+                  {currentIndex + 1} of {cards.length}
+                </p>
+                <div
+                  className="study-progress-track"
+                  role="progressbar"
+                  aria-label="Flip-through progress"
+                  aria-valuemin="0"
+                  aria-valuemax={cards.length}
+                  aria-valuenow={currentIndex + 1}
+                >
+                  <span style={{ width: `${((currentIndex + 1) / cards.length) * 100}%` }} />
+                </div>
+              </div>
               <label className="flip-shuffle">
                 <input
                   type="checkbox"
@@ -221,15 +233,24 @@ function FlipThrough() {
             </div>
 
             <button
-              className="study-card"
               type="button"
               onClick={() => setFlipped((value) => !value)}
               aria-label={`Flip flashcard. Showing ${flipped ? "back" : "front"}.`}
               aria-pressed={flipped}
+              className={`study-card${flipped ? " is-flipped" : ""}`}
             >
-              <h3>{flipped ? "Back" : "Front"}</h3>
-              <p>{flipped ? card.back : card.front}</p>
-              <span>Click or press Space to flip</span>
+              <span className="study-card-inner">
+                <span className="study-card-face study-card-front">
+                  <span className="study-card-label">Front</span>
+                  <span className="study-card-copy">{card.front}</span>
+                  <span className="study-card-hint">Click or press Space to flip</span>
+                </span>
+                <span className="study-card-face study-card-back">
+                  <span className="study-card-label">Back</span>
+                  <span className="study-card-copy">{card.back}</span>
+                  <span className="study-card-hint">Click or press Space to flip</span>
+                </span>
+              </span>
             </button>
 
             <div className="flip-navigation">

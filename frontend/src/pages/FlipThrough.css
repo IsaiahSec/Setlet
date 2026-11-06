@@ -59,3 +59,60 @@
     min-width: 120px;
   }
 }
+
+.flip-unsaved-message {
+  margin: 0 0 22px;
+  border-left: 3px solid #63349a;
+  border-radius: 0 7px 7px 0;
+  padding: 11px 13px;
+  background: #f7f3fb;
+  color: #62576f;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.flip-toolbar,
+.flip-navigation {
+  gap: 14px;
+}
+
+.flip-progress-block {
+  flex: 1 1 180px;
+}
+
+.flip-progress-block .study-progress {
+  margin-bottom: 8px;
+}
+
+.flip-shuffle {
+  min-height: 38px;
+  gap: 9px;
+  border: 1px solid #e7e1ed;
+  border-radius: 8px;
+  padding: 0 12px;
+  background: #fff;
+  color: #514a5a;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.flip-shuffle input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: #4f2683;
+}
+
+.flip-navigation {
+  margin-top: 19px;
+}
+
+@media (max-width: 600px) {
+  .flip-toolbar { align-items: stretch; }
+  .flip-shuffle { align-self: flex-start; }
+
+  .flip-navigation {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

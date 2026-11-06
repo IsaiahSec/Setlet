@@ -12,6 +12,7 @@ import StudyReview from "./StudyReview";
 import * as api from "../services/api";
 
 vi.mock("../services/api", () => ({
+  getSet: vi.fn(),
   getStudySession: vi.fn(),
   reviewCard: vi.fn(),
 }));
@@ -196,6 +197,13 @@ describe("Study Review", () => {
   });
 
   it("shows the empty state with study counts", async () => {
+    api.getSet.mockResolvedValue({
+      set: {
+        ...sampleSession.set,
+        cards: sampleSession.cards.map((card) => ({ ...card })),
+      },
+    });
+
     api.getStudySession.mockResolvedValue({
       set: { id: 2, title: "Biology Chapter 1" },
       cards: [],
@@ -216,6 +224,52 @@ describe("Study Review", () => {
     expect(screen.getByText("New: 0")).toBeTruthy();
     expect(screen.getByText("Due: 0")).toBeTruthy();
     expect(screen.getByText("Upcoming: 5")).toBeTruthy();
+    expect(
+      screen.getByRole("link", { name: "Flip Through" }).getAttribute("href")
+    ).toBe("/flip/2");
+    expect(
+      screen.getByText(
+        "No new or due cards are available. Your next reviews are scheduled for later."
+      )
+    ).toBeTruthy();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Practice Again" })
+    );
+
+    expect(api.getSet).toHaveBeenCalledWith("2");
+    expect(
+      await screen.findByText(
+        "Practice session. Ratings and progress will not be saved."
+      )
+    ).toBeTruthy();
+    expect(await screen.findByText("What is DNA?")).toBeTruthy();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Flip flashcard" })
+    );
+
+    expect(screen.getByRole("button", { name: /1\. Again/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /2\. Hard/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /3\. Good/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /4\. Easy/ })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: /3\. Good/ }));
+    expect(await screen.findByText("What is a cell?")).toBeTruthy();
+    expect(api.reviewCard).not.toHaveBeenCalled();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Flip flashcard" })
+    );
+    fireEvent.click(screen.getByRole("button", { name: /4\. Easy/ }));
+
+    expect(await screen.findByText("Practice Complete!")).toBeTruthy();
+    expect(
+      screen.getByText(
+        "You practiced all 2 cards. Your ratings and progress were not saved."
+      )
+    ).toBeTruthy();
+    expect(api.reviewCard).not.toHaveBeenCalled();
   });
 
   it("shows the summary and reloads when Study again is clicked", async () => {
@@ -240,8 +294,21 @@ describe("Study Review", () => {
     );
 
     expect(await screen.findByText("Study Complete!")).toBeTruthy();
+    expect(
+      screen.getByText(
+        "You reviewed all 2 cards. Your next reviews are scheduled based on your ratings."
+      )
+    ).toBeTruthy();
     expect(screen.getByText("Reviews completed: 2")).toBeTruthy();
     expect(screen.getByText("Rated Again: 0")).toBeTruthy();
+    expect(
+      screen.getByRole("link", { name: "Flip Through Again" }).getAttribute("href")
+    ).toBe("/flip/2");
+    expect(
+      screen.getByText(
+        "Practice every card without changing its review schedule."
+      )
+    ).toBeTruthy();
 
     fireEvent.click(
       screen.getByRole("button", { name: "Study again" })

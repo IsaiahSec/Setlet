@@ -1,7 +1,6 @@
-
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { getStudySession, reviewCard } from "../services/api";
+import { getSet, getStudySession, reviewCard } from "../services/api";
 import "./StudyReview.css";
 
 const ratings = [
@@ -31,11 +30,13 @@ function StudyReview() {
   const [againCount, setAgainCount] = useState(0);
   const [sessionTotal, setSessionTotal] = useState(0);
   const [finished, setFinished] = useState(false);
+  const [practiceMode, setPracticeMode] = useState(false);
 
   const savingRef = useRef(false);
   const card = queue[0];
 
   const loadSession = useCallback(async () => {
+    setPracticeMode(false);
     setLoading(true);
     setError("");
     setNotFound(false);
@@ -70,6 +71,45 @@ function StudyReview() {
     }
   }, [setId]);
 
+  const loadPracticeSession = useCallback(async () => {
+    setPracticeMode(true);
+    setLoading(true);
+    setError("");
+    setNotFound(false);
+    setFinished(false);
+    setFlipped(false);
+    setQueue([]);
+    setReviewCount(0);
+    setAgainCount(0);
+    savingRef.current = false;
+
+    try {
+      const data = await getSet(setId);
+      const studySet = data.set || data;
+      const practiceCards = Array.isArray(studySet.cards)
+        ? studySet.cards
+        : [];
+
+      setSetTitle(studySet.title || "Study Review");
+      setSessionTotal(practiceCards.length);
+
+      if (practiceCards.length === 0) {
+        setError("This set has no flashcards to practice.");
+        return;
+      }
+
+      setQueue(practiceCards);
+    } catch (err) {
+      if (err.status === 404) {
+        setNotFound(true);
+      } else {
+        setError(err.message || "Could not load flashcards for practice.");
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [setId]);
+
   useEffect(() => {
     loadSession();
   }, [loadSession]);
@@ -82,7 +122,9 @@ function StudyReview() {
     setError("");
 
     try {
-      await reviewCard(card.id, rating);
+      if (!practiceMode) {
+        await reviewCard(card.id, rating);
+      }
 
       setReviewCount((count) => count + 1);
 
@@ -108,7 +150,7 @@ function StudyReview() {
       savingRef.current = false;
       setSaving(false);
     }
-  }, [card, flipped, queue]);
+  }, [card, flipped, practiceMode, queue]);
 
   useEffect(() => {
     function handleKeyDown(event) {
@@ -171,52 +213,135 @@ function StudyReview() {
             <button
               className="study-button"
               type="button"
-              onClick={loadSession}
+              onClick={practiceMode ? loadPracticeSession : loadSession}
             >
               Try again
             </button>
           </section>
         ) : finished ? (
-          <section className="study-panel">
-            <h2>Study Complete!</h2>
-            <p>Reviews completed: {reviewCount}</p>
-            <p>Rated Again: {againCount}</p>
-            <button
-              className="study-button"
-              type="button"
-              onClick={loadSession}
-            >
-              Study again
-            </button>
+          <section
+            className="study-panel study-completion"
+            aria-labelledby="study-completion-title"
+            aria-live="polite"
+          >
+            <span className="study-completion-mark" aria-hidden="true">&#10003;</span>
+            <p className="study-completion-eyebrow">Session complete</p>
+            <h2 id="study-completion-title">
+              {practiceMode ? "Practice Complete!" : "Study Complete!"}
+            </h2>
+            <p className="study-completion-copy">
+              {practiceMode
+                ? `You practiced all ${sessionTotal} cards. Your ratings and progress were not saved.`
+                : `You reviewed all ${sessionTotal} cards. Your next reviews are scheduled based on your ratings.`}
+            </p>
+            <div className="study-completion-stats">
+              <p>{practiceMode ? "Cards practiced" : "Reviews completed"}: {reviewCount}</p>
+              <p>Rated Again: {againCount}</p>
+            </div>
+            <div className="study-completion-actions">
+              <div className="study-completion-choice">
+                <Link
+                  className="study-button study-button-secondary"
+                  to={`/flip/${setId}`}
+                  aria-describedby="flip-through-description"
+                >
+                  Flip Through Again
+                </Link>
+                <span id="flip-through-description">
+                  Practice every card without changing its review schedule.
+                </span>
+              </div>
+              <div className="study-completion-choice">
+                <button
+                  className="study-button"
+                  type="button"
+                  onClick={loadSession}
+                  aria-describedby="study-again-description"
+                >
+                  Study again
+                </button>
+                <span id="study-again-description">
+                  Check for cards that are due for review.
+                </span>
+              </div>
+            </div>
           </section>
         ) : !card ? (
           <section className="study-panel">
             <h2>Nothing to study right now</h2>
+            <p className="study-empty-copy">
+              No new or due cards are available. Your next reviews are scheduled for later.
+            </p>
             <p>New: {counts.new}</p>
             <p>Due: {counts.due}</p>
             <p>Upcoming: {counts.upcoming}</p>
             <p>Total cards: {counts.total}</p>
+            {counts.total > 0 && counts.new === 0 && counts.due === 0 && (
+              <div className="study-empty-actions">
+                <button
+                  className="study-button study-empty-practice-button"
+                  type="button"
+                  onClick={loadPracticeSession}
+                >
+                  Practice Again
+                </button>
+                <Link
+                  className="study-button study-empty-flip-button"
+                  to={`/flip/${setId}`}
+                >
+                  Flip Through
+                </Link>
+              </div>
+            )}
           </section>
         ) : (
           <section className="study-panel">
             <p className="study-progress">
               {Math.min(sessionTotal, reviewCount - againCount + 1)} of {sessionTotal}
             </p>
+            <div
+              className="study-progress-track review-progress-track"
+              role="progressbar"
+              aria-label="Study session progress"
+              aria-valuemin="0"
+              aria-valuemax={sessionTotal}
+              aria-valuenow={Math.min(sessionTotal, reviewCount - againCount + 1)}
+            >
+              <span
+                style={{ width: `${sessionTotal ? (Math.min(sessionTotal, reviewCount - againCount + 1) / sessionTotal) * 100 : 0}%` }}
+              />
+            </div>
 
             {error && (
               <p className="study-error" role="alert">{error}</p>
             )}
 
+            {practiceMode && (
+              <p className="study-practice-notice" role="status">
+                Practice session. Ratings and progress will not be saved.
+              </p>
+            )}
+
             <button
-              className="study-card"
               type="button"
               disabled={saving}
               onClick={() => setFlipped((value) => !value)}
               aria-label="Flip flashcard"
+              aria-pressed={flipped}
+              className={`study-card${flipped ? " is-flipped" : ""}`}
             >
-              <h3>{flipped ? "Back" : "Front"}</h3>
-              <p>{flipped ? card.back : card.front}</p>
-              <span>Click or press Space to flip</span>
+              <span className="study-card-inner">
+                <span className="study-card-face study-card-front">
+                  <span className="study-card-label">Front</span>
+                  <span className="study-card-copy">{card.front}</span>
+                  <span className="study-card-hint">Click or press Space to flip</span>
+                </span>
+                <span className="study-card-face study-card-back">
+                  <span className="study-card-label">Back</span>
+                  <span className="study-card-copy">{card.back}</span>
+                  <span className="study-card-hint">Click or press Space to flip</span>
+                </span>
+              </span>
             </button>
 
             {flipped && (

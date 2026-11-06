@@ -211,3 +211,163 @@
   outline: 2px solid #4f2683;
   outline-offset: 3px;
 }
+
+.seteditor-page {
+  min-height: calc(100vh - 72px);
+  padding: 36px 24px 58px;
+  background: transparent;
+  font-family: "DM Sans", "Avenir Next", sans-serif;
+}
+
+.seteditor-container { width: min(940px, 100%); }
+
+.seteditor-header h1 {
+  margin: 0 0 8px;
+  color: #291344;
+  font-family: Manrope, "Avenir Next", sans-serif;
+  font-size: clamp(29px, 4vw, 38px);
+  font-weight: 800;
+  line-height: 1.18;
+  overflow-wrap: anywhere;
+}
+
+.seteditor-header p { color: #716b7b; line-height: 1.65; }
+
+.seteditor-panel {
+  margin-bottom: 18px;
+  border: 1px solid #e7e1ed;
+  border-radius: 14px;
+  padding: clamp(18px, 2.5vw, 25px);
+  background: rgb(255 255 255 / 95%);
+  box-shadow: 0 4px 16px rgb(42 22 67 / 5%);
+  backdrop-filter: blur(14px);
+}
+
+.seteditor-panel h2 {
+  color: #291344;
+  font-family: Manrope, "Avenir Next", sans-serif;
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.seteditor-form { display: grid; gap: 10px; }
+
+.seteditor-form label {
+  color: #40384b;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.seteditor-form input,
+.seteditor-form textarea,
+.seteditor-visibility select {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 46px;
+  border: 1px solid #dcd5e4;
+  border-radius: 9px;
+  padding: 11px 13px;
+  background: #fdfcfe;
+  color: #24202d;
+  font: inherit;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.seteditor-form textarea { min-height: 94px; resize: vertical; }
+
+.seteditor-form input:focus,
+.seteditor-form textarea:focus,
+.seteditor-visibility select:focus {
+  border-color: #63349a;
+  outline: 0;
+  box-shadow: 0 0 0 4px rgb(99 52 154 / 10%);
+}
+
+.seteditor-page button,
+.seteditor-study-button {
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 0 16px;
+  background: #4f2683;
+  color: #fff;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: transform 160ms ease, background-color 160ms ease, box-shadow 160ms ease;
+}
+
+.seteditor-page button:hover,
+.seteditor-study-button:hover {
+  transform: translateY(-1px);
+  background: #39205d;
+  color: #fff;
+  box-shadow: 0 7px 15px rgb(57 32 93 / 18%);
+}
+
+.seteditor-page button:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.seteditor-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin-top: 10px;
+}
+
+.seteditor-card {
+  margin-top: 14px;
+  border: 1px solid #e7e1ed;
+  border-radius: 10px;
+  padding: 18px;
+  background: #fcfbfd;
+}
+
+.seteditor-card h3 {
+  margin: 0 0 16px;
+  color: #39205d;
+  font-family: Manrope, "Avenir Next", sans-serif;
+  font-size: 16px;
+}
+
+.seteditor-visibility {
+  display: grid;
+  max-width: 430px;
+  gap: 9px;
+  margin-top: 18px;
+  border: 1px solid #e1d6ee;
+  border-radius: 10px;
+  padding: 16px;
+  background: #f7f3fb;
+}
+
+.seteditor-visibility select { max-width: 240px; background: #fff; }
+
+.seteditor-visibility-warning {
+  margin: 0;
+  color: #716b7b;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.seteditor-error,
+.seteditor-success {
+  border-radius: 9px;
+  padding: 12px 14px;
+  font-size: 14px;
+}
+
+.seteditor-error { border: 1px solid #f0c4c4; background: #fff3f2; color: #9c2c2c; }
+.seteditor-success { border: 1px solid #b9dec3; background: #effaf1; color: #27613a; }
+
+@media (max-width: 600px) {
+  .seteditor-page { min-height: calc(100vh - 62px); padding: 26px 14px 44px; }
+  .seteditor-panel { padding: 19px 16px; }
+  .seteditor-visibility select { max-width: none; }
+  .seteditor-card { padding: 15px; }
+}

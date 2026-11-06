@@ -1,29 +1,113 @@
 
-/* Basic styles for the navigation bar */
-
-body {
-  margin: 0;
-  font-family: Arial, sans-serif;
-}
-
-nav {
+.app-nav {
+  position: sticky;
+  z-index: 10;
+  top: 0;
   display: flex;
   align-items: center;
-  gap: 20px;
-  padding: 12px 20px;
-  border-bottom: 1px solid #ddd;
+  min-height: 72px;
+  padding: 0 clamp(18px, 5vw, 72px);
+  border-bottom: 1px solid rgb(231 225 237 / 85%);
+  background: rgb(255 255 255 / 90%);
+  box-shadow: 0 4px 18px rgb(42 22 67 / 4%);
+  backdrop-filter: blur(14px);
 }
 
-nav a {
-  color: #333;
+.app-nav-inner {
+  display: flex;
+  align-items: center;
+  gap: 34px;
+  width: min(1120px, 100%);
+  margin: 0 auto;
+}
+
+.app-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-right: auto;
+  color: var(--purple-950);
+  font-family: Manrope, "Avenir Next", sans-serif;
+  font-size: 20px;
+  font-weight: 800;
   text-decoration: none;
 }
 
-nav a:hover {
-  text-decoration: underline;
+.app-brand-mark {
+  display: grid;
+  width: 34px;
+  aspect-ratio: 1;
+  place-items: center;
+  border-radius: 11px;
+  background: var(--purple-800);
+  color: #fff;
+  font-size: 16px;
+  box-shadow: 0 5px 12px rgb(79 38 131 / 22%);
 }
 
-nav button {
-  padding: 6px 12px;
+.app-nav-links {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.app-nav-links a,
+.app-nav button {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 9px;
+  padding: 0 14px;
+  background: transparent;
+  color: #5e5669;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: background-color 160ms ease, color 160ms ease, transform 160ms ease;
+}
+
+.app-nav-links a:hover,
+.app-nav button:hover {
+  background: var(--purple-50);
+  color: var(--purple-800);
+}
+
+.app-nav button {
+  border: 1px solid var(--line);
+  background: #fff;
   cursor: pointer;
+}
+
+@media (max-width: 600px) {
+  .app-nav {
+    min-height: 62px;
+    padding: 0 14px;
+  }
+
+  .app-nav-inner {
+    gap: 10px;
+  }
+
+  .app-brand {
+    gap: 7px;
+    font-size: 17px;
+  }
+
+  .app-brand-mark {
+    width: 30px;
+  }
+
+  .app-nav-links {
+    gap: 2px;
+  }
+
+  .app-nav-links a,
+  .app-nav button {
+    min-height: 36px;
+    padding: 0 9px;
+    font-size: 12px;
+  }
 }
