@@ -148,7 +148,10 @@ MVP tables, per the project proposal: `users`, `study_sets`, `cards`, `review_st
 `GET /sets/<set_id>/study` returns the visible set, the caller's due and new cards,
 and counts for the entire set. `POST /cards/<card_id>/review` validates a rating
 from 1 to 4, calculates the next schedule, and writes the state and review log
-atomically.
+atomically. `GET /history` returns caller-scoped aggregates only: total review
+logs, distinct cards reviewed, distinct sets studied, a UTC-day review-count
+series for the last 30 days (zero-filled), and overdue/upcoming due counts
+from `review_state`.
 
 The authenticated set API supports creating, updating, deleting, and reordering cards under `/sets/<set_id>/cards` and `/sets/<set_id>/cards/order`. Only the set owner can manipulate sets and cards. Owners can switch set visibility between `private` and `public`; switching to public sets `shared_at`, and switching back to private clears it. Individual set reads include cards ordered by `position`, then `id`, plus the owner's name and whether the viewer is the owner. New cards are appended to the end of each set's card order. Set lists remain owner-only and include a `card_count`.
 

@@ -40,3 +40,9 @@ def submit_review(card_id):
     if result is None:
         return jsonify({"error": "Set not found"}), 404
     return jsonify(result), 200
+
+
+@reviews_bp.get("/history")
+@require_auth
+def get_history():
+    return jsonify(reviews.get_history(g.user_id, review_service.utcnow())), 200
