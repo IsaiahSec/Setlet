@@ -58,6 +58,7 @@ refuse to connect unless the database name ends in `_test`.
 - `GET /sets?q=<text>` - list the authenticated user's study sets, optionally filtered by search terms.
 - `GET /sets/public?q=<text>&owner_id=<id>&shared_from=<YYYY-MM-DD>&shared_to=<YYYY-MM-DD>&page=<n>&page_size=<n>` - search public study sets owned by other users, with optional owner/shared-date filters and pagination.
 - `GET /sets/<id>` - read one of the authenticated user's study sets or a public set; includes cards, `owner_id`, `owner_name`, and `is_owner`.
+- `GET /sets/recent` - list up to 4 recently viewed readable sets for the authenticated user, most recent first.
 - `PATCH /sets/<id>` - rename, update the description, or set visibility to `private` or `public` on an owned study set.
 - `DELETE /sets/<id>` - delete an owned study set.
 - `POST /sets/<id>/cards` - add a card to an owned set (`front` and `back`, each 1–2,000 trimmed characters).
@@ -76,6 +77,12 @@ update them or their cards. `PUT /sets/<id>/cards/order` returns
 does not contain each card in the set exactly once. `GET /sets` remains
 owner-only and includes a `card_count` for each set. Deleting a set cascades
 to its cards.
+
+Successful reads from `GET /sets/<id>` and `GET /sets/<id>/study` update the
+caller's recent history in `recent_sets`. The table keeps one row per
+`(user_id, set_id)` and stores only the latest four viewed sets per user.
+`GET /sets/recent` applies visibility checks in SQL, so sets that are deleted
+or no longer visible to the caller are automatically omitted.
 
 Study progress is stored separately for each user. The study queue lists due
 cards first, then at most 10 new cards, with a maximum of 50 cards total.

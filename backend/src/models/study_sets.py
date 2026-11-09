@@ -182,6 +182,74 @@ def get_set_for_viewer(set_id, viewer_id):
         conn.close()
 
 
+def record_recent_view(user_id, set_id):
+    """Upsert a recently viewed set and keep only the user's latest four views."""
+    conn = get_connection()
+    try:
+        with conn, conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO recent_sets (user_id, set_id, viewed_at) "
+                "VALUES (%s, %s, now()) "
+                "ON CONFLICT (user_id, set_id) DO UPDATE "
+                "SET viewed_at = EXCLUDED.viewed_at",
+                (user_id, set_id),
+            )
+            cur.execute(
+                "DELETE FROM recent_sets "
+                "WHERE user_id = %s AND set_id NOT IN ("
+                "SELECT set_id FROM recent_sets "
+                "WHERE user_id = %s "
+                "ORDER BY viewed_at DESC, set_id DESC "
+                "LIMIT 4"
+                ")",
+                (user_id, user_id),
+            )
+    finally:
+        conn.close()
+
+
+def list_recent_sets(user_id):
+    """Return up to four visible recently viewed sets for the caller."""
+    conn = get_connection()
+    try:
+        with conn, conn.cursor() as cur:
+            cur.execute(
+                "SELECT study_sets.id, study_sets.title, study_sets.description, "
+                "(SELECT COUNT(*) FROM cards WHERE cards.set_id = study_sets.id) "
+                "AS card_count, study_sets.owner_id, "
+                "split_part(users.email, '@', 1) AS owner_name, "
+                "(study_sets.owner_id = %s) AS is_owner, recent_sets.viewed_at "
+                "FROM recent_sets "
+                "JOIN study_sets ON study_sets.id = recent_sets.set_id "
+                "JOIN users ON users.id = study_sets.owner_id "
+                "WHERE recent_sets.user_id = %s "
+                "AND (study_sets.owner_id = %s OR study_sets.visibility = 'public') "
+                "ORDER BY recent_sets.viewed_at DESC, recent_sets.set_id DESC "
+                "LIMIT 4",
+                (user_id, user_id, user_id),
+            )
+            return [
+                dict(
+                    zip(
+                        (
+                            "id",
+                            "title",
+                            "description",
+                            "card_count",
+                            "owner_id",
+                            "owner_name",
+                            "is_owner",
+                            "viewed_at",
+                        ),
+                        row,
+                    )
+                )
+                for row in cur.fetchall()
+            ]
+    finally:
+        conn.close()
+
+
 def update_set(owner_id, set_id, fields):
     """Update only explicitly allowed fields and return the set, or None."""
     updates = [

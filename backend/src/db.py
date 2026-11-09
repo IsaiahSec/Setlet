@@ -66,6 +66,15 @@ CREATE TABLE IF NOT EXISTS review_logs (
 )
 """
 
+RECENT_SETS_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS recent_sets (
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    set_id INTEGER NOT NULL REFERENCES study_sets(id) ON DELETE CASCADE,
+    viewed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (user_id, set_id)
+)
+"""
+
 
 def get_connection():
     database_url = os.environ.get("DATABASE_URL")
@@ -108,6 +117,7 @@ def init_db():
             )
             cur.execute(REVIEW_STATE_TABLE_SQL)
             cur.execute(REVIEW_LOGS_TABLE_SQL)
+            cur.execute(RECENT_SETS_TABLE_SQL)
             cur.execute(
                 "CREATE INDEX IF NOT EXISTS study_sets_owner_id_idx "
                 "ON study_sets(owner_id)"
@@ -122,6 +132,10 @@ def init_db():
             cur.execute(
                 "CREATE INDEX IF NOT EXISTS review_logs_user_reviewed_at_idx "
                 "ON review_logs(user_id, reviewed_at)"
+            )
+            cur.execute(
+                "CREATE INDEX IF NOT EXISTS recent_sets_user_viewed_at_idx "
+                "ON recent_sets(user_id, viewed_at DESC)"
             )
     finally:
         conn.close()

@@ -100,7 +100,7 @@ The initial backend structure is organized into three primary areas, mirroring t
 - `db.py` - PostgreSQL connection handling
 - `tests/` - pytest suite, mirroring the structure above
 
-The backend includes authentication and owner-scoped study-set mutations, with table-specific raw SQL models and service validation. Individual set reads and review endpoints are visible to the owner and to other users only when the set is public. Review progress is scoped to the authenticated user.
+The backend includes authentication and owner-scoped study-set mutations, with table-specific raw SQL models and service validation. Individual set reads and review endpoints are visible to the owner and to other users only when the set is public. Review progress is scoped to the authenticated user, and successful set/study reads are tracked per user for a recent-sets list.
 
 Authenticated users can list other users' public sets with `GET /sets/public`,
 optionally searching titles and descriptions by keyword, filtering by owner and
@@ -125,7 +125,7 @@ PostgreSQL, hosted on Render alongside the backend, accessed via `psycopg2` rath
 
 ### Initial Data Model
 
-MVP tables, per the project proposal: `users`, `study_sets`, `cards`, `review_state`, `review_logs`. Two additional tables — `feedback_limits` and `notes` — are part of the full proposal scope but support post-MVP features, so their schemas will be implemented after the MVP milestone. `db.py` connects using the `DATABASE_URL` environment variable and creates tables on startup if they do not exist. Currently implemented:
+MVP tables, per the project proposal: `users`, `study_sets`, `cards`, `review_state`, `review_logs`, `recent_sets`. Two additional tables — `feedback_limits` and `notes` — are part of the full proposal scope but support post-MVP features, so their schemas will be implemented after the MVP milestone. `db.py` connects using the `DATABASE_URL` environment variable and creates tables on startup if they do not exist. Currently implemented:
 
 - `users` - `id` (serial primary key), `email` (unique), `password_hash` (bcrypt), `created_at`
 - `study_sets` - `id`, `owner_id` (references `users`), `title`, `description`, `visibility`, `shared_at` (nullable; set when shared publicly), `created_at`, `updated_at`
@@ -144,6 +144,12 @@ MVP tables, per the project proposal: `users`, `study_sets`, `cards`, `review_st
     `interval_days_after INTEGER NOT NULL`, and
     `reviewed_at TIMESTAMPTZ NOT NULL DEFAULT now()`.
   - Indexed by `(user_id, reviewed_at)`.
+- `recent_sets`
+  - `user_id` and `set_id` reference `users` and `study_sets` with `ON DELETE CASCADE`
+    and form a composite primary key (one row per user/set pair).
+  - `viewed_at TIMESTAMPTZ NOT NULL` stores the latest successful read time for
+    `GET /sets/<set_id>` and `GET /sets/<set_id>/study`.
+  - Indexed by `(user_id, viewed_at DESC)`.
 
 `GET /sets/<set_id>/study` returns the visible set, the caller's due and new cards,
 and counts for the entire set. `POST /cards/<card_id>/review` validates a rating
@@ -151,6 +157,8 @@ from 1 to 4, calculates the next schedule, and writes the state and review log
 atomically.
 
 The authenticated set API supports creating, updating, deleting, and reordering cards under `/sets/<set_id>/cards` and `/sets/<set_id>/cards/order`. Only the set owner can manipulate sets and cards. Owners can switch set visibility between `private` and `public`; switching to public sets `shared_at`, and switching back to private clears it. Individual set reads include cards ordered by `position`, then `id`, plus the owner's name and whether the viewer is the owner. New cards are appended to the end of each set's card order. Set lists remain owner-only and include a `card_count`.
+
+`GET /sets/recent` returns up to four most recently viewed readable sets for the caller, ordered by `viewed_at` descending. Visibility filtering is enforced in SQL (`owner_id = caller OR visibility = 'public'`), so entries for deleted or now-private non-owned sets are omitted from results.
 
 ---
 

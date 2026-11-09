@@ -17,6 +17,7 @@ def study_set(set_id):
 
     now = review_service.utcnow()
     cards, counts = reviews.get_study_data(set_id, g.user_id, now)
+    study_sets.record_recent_view(g.user_id, set_id)
 
     return jsonify(
         {
