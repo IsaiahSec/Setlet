@@ -67,6 +67,7 @@ refuse to connect unless the database name ends in `_test`.
 - `PUT /sets/<id>/cards/order` - owner-only card reorder. Body must be `{"card_ids": [ ... ]}` containing every card ID in the set exactly once.
 - `GET /sets/<id>/study` - get the caller's due and new cards, plus set-wide counts.
 - `POST /cards/<card_id>/review` - rate a visible card from 1 (Again) to 4 (Easy).
+- `GET /history` - get caller-only review totals, a zero-filled UTC daily review series for the last 30 days (including today), and overdue/upcoming due counts for the next 14 days.
 
 `cards` include an internal per-set `position` used for ordering. `GET
 /sets/<id>` returns cards ordered by `position`, then `id`. New cards are
@@ -89,6 +90,9 @@ cards first, then at most 10 new cards, with a maximum of 50 cards total.
 Submitting a review updates the schedule and appends a review log in one
 transaction. Both endpoints require authentication and return 404 when the
 set is not visible to the caller.
+
+`GET /history` also requires authentication. It returns only aggregate counts
+for the caller and no card/set text.
 
 `GET /sets/public` requires authentication and returns only other users' public
 sets. Search is case-insensitive across titles and descriptions, matching all
