@@ -48,12 +48,19 @@ def list_public_sets():
     return jsonify(result), 200
 
 
+@sets_bp.get("/recent")
+@require_auth
+def list_recent_sets():
+    return jsonify({"sets": study_sets.list_recent_sets(g.user_id)}), 200
+
+
 @sets_bp.get("/<int:set_id>")
 @require_auth
 def get_set(set_id):
     result = study_sets.get_set_for_viewer(set_id, g.user_id)
     if result is None:
         return jsonify({"error": "Set not found"}), 404
+    study_sets.record_recent_view(g.user_id, set_id)
     result["is_owner"] = result["owner_id"] == g.user_id
     return jsonify(result), 200
 

@@ -26,6 +26,16 @@ def assert_iso8601_utc(value):
     assert value.endswith("+00:00")
 
 
+def fetch_scalar(query, values):
+    conn = get_connection()
+    try:
+        with conn, conn.cursor() as cursor:
+            cursor.execute(query, values)
+            return cursor.fetchone()[0]
+    finally:
+        conn.close()
+
+
 def test_postgres_set_crud(pg_client, make_user):
     user_id, headers = make_user("set-owner@example.com", "correct horse")
 
@@ -415,6 +425,138 @@ def test_postgres_set_endpoints_require_authentication(pg_client):
     assert pg_client.get("/sets/1").status_code == 401
     assert pg_client.patch("/sets/1", json={"title": "No token"}).status_code == 401
     assert pg_client.delete("/sets/1").status_code == 401
+
+
+def test_postgres_recent_sets_records_views_and_keeps_latest_order(pg_client, make_user):
+    user_id, headers = make_user("recent-order@example.com", "correct horse")
+    first = create_set(pg_client, headers, "First recent").json
+    second = create_set(pg_client, headers, "Second recent").json
+
+    assert pg_client.get(f"/sets/{first['id']}", headers=headers).status_code == 200
+    assert pg_client.get(f"/sets/{second['id']}", headers=headers).status_code == 200
+    assert pg_client.get(f"/sets/{first['id']}", headers=headers).status_code == 200
+    assert pg_client.get(f"/sets/{second['id']}/study", headers=headers).status_code == 200
+
+    recent = pg_client.get("/sets/recent", headers=headers)
+
+    assert recent.status_code == 200
+    assert [item["id"] for item in recent.json["sets"]] == [second["id"], first["id"]]
+    assert all(item["is_owner"] for item in recent.json["sets"])
+    assert fetch_scalar(
+        "SELECT COUNT(*) FROM recent_sets WHERE user_id = %s", (user_id,)
+    ) == 2
+
+
+def test_postgres_recent_sets_returns_only_latest_four(pg_client, make_user):
+    _, headers = make_user("recent-limit@example.com", "correct horse")
+    opened_ids = []
+    for index in range(5):
+        study_set = create_set(pg_client, headers, f"Recent {index}").json
+        opened_ids.append(study_set["id"])
+        assert pg_client.get(f"/sets/{study_set['id']}", headers=headers).status_code == 200
+
+    recent = pg_client.get("/sets/recent", headers=headers)
+
+    assert recent.status_code == 200
+    assert [item["id"] for item in recent.json["sets"]] == list(reversed(opened_ids[-4:]))
+
+
+def test_postgres_recent_sets_include_private_and_public_owned_sets(pg_client, make_user):
+    _, headers = make_user("recent-owned@example.com", "correct horse")
+    private_set = create_set(pg_client, headers, "Owned private").json
+    public_set = make_set_public(
+        pg_client, headers, create_set(pg_client, headers, "Owned public").json
+    )
+
+    assert pg_client.get(f"/sets/{private_set['id']}", headers=headers).status_code == 200
+    assert pg_client.get(f"/sets/{public_set['id']}", headers=headers).status_code == 200
+    recent = pg_client.get("/sets/recent", headers=headers)
+
+    assert recent.status_code == 200
+    assert [item["id"] for item in recent.json["sets"]] == [public_set["id"], private_set["id"]]
+    assert all(item["is_owner"] is True for item in recent.json["sets"])
+
+
+def test_postgres_recent_sets_hide_unreadable_sets_without_affecting_owner(
+    pg_client, make_user
+):
+    _, owner_headers = make_user("recent-owner@example.com", "correct horse")
+    _, viewer_headers = make_user("recent-viewer@example.com", "correct horse")
+    study_set = make_set_public(
+        pg_client, owner_headers, create_set(pg_client, owner_headers, "Shared then private").json
+    )
+
+    assert pg_client.get(f"/sets/{study_set['id']}", headers=owner_headers).status_code == 200
+    assert pg_client.get(f"/sets/{study_set['id']}", headers=viewer_headers).status_code == 200
+    assert [item["id"] for item in pg_client.get("/sets/recent", headers=viewer_headers).json["sets"]] == [
+        study_set["id"]
+    ]
+
+    assert (
+        pg_client.patch(
+            f"/sets/{study_set['id']}",
+            headers=owner_headers,
+            json={"visibility": "private"},
+        ).status_code
+        == 200
+    )
+
+    assert pg_client.get("/sets/recent", headers=viewer_headers).json == {"sets": []}
+    owner_recent = pg_client.get("/sets/recent", headers=owner_headers)
+    assert owner_recent.status_code == 200
+    assert [item["id"] for item in owner_recent.json["sets"]] == [study_set["id"]]
+
+
+def test_postgres_recent_sets_do_not_record_404_reads(pg_client, make_user):
+    owner_id, owner_headers = make_user("recent-private-owner@example.com", "correct horse")
+    viewer_id, viewer_headers = make_user("recent-private-viewer@example.com", "correct horse")
+    private_set = create_set(pg_client, owner_headers, "Hidden private").json
+
+    denied = pg_client.get(f"/sets/{private_set['id']}", headers=viewer_headers)
+    recent = pg_client.get("/sets/recent", headers=viewer_headers)
+
+    assert denied.status_code == 404
+    assert recent.status_code == 200
+    assert recent.json == {"sets": []}
+    assert fetch_scalar(
+        "SELECT COUNT(*) FROM recent_sets WHERE user_id IN (%s, %s)",
+        (owner_id, viewer_id),
+    ) == 0
+
+
+def test_postgres_recent_sets_are_isolated_per_user(pg_client, make_user):
+    _, first_headers = make_user("recent-first@example.com", "correct horse")
+    _, second_headers = make_user("recent-second@example.com", "correct horse")
+    first_set = create_set(pg_client, first_headers, "First user set").json
+    second_set = create_set(pg_client, second_headers, "Second user set").json
+
+    assert pg_client.get(f"/sets/{first_set['id']}", headers=first_headers).status_code == 200
+    assert pg_client.get(f"/sets/{second_set['id']}", headers=second_headers).status_code == 200
+
+    first_recent = pg_client.get("/sets/recent", headers=first_headers)
+    second_recent = pg_client.get("/sets/recent", headers=second_headers)
+
+    assert [item["id"] for item in first_recent.json["sets"]] == [first_set["id"]]
+    assert [item["id"] for item in second_recent.json["sets"]] == [second_set["id"]]
+
+
+def test_postgres_deleting_set_removes_it_from_all_recent_lists(pg_client, make_user):
+    _, owner_headers = make_user("recent-delete-owner@example.com", "correct horse")
+    _, viewer_headers = make_user("recent-delete-viewer@example.com", "correct horse")
+    study_set = make_set_public(
+        pg_client, owner_headers, create_set(pg_client, owner_headers, "Delete me").json
+    )
+
+    assert pg_client.get(f"/sets/{study_set['id']}", headers=owner_headers).status_code == 200
+    assert pg_client.get(f"/sets/{study_set['id']}", headers=viewer_headers).status_code == 200
+    assert pg_client.delete(f"/sets/{study_set['id']}", headers=owner_headers).status_code == 204
+
+    assert pg_client.get("/sets/recent", headers=owner_headers).json == {"sets": []}
+    assert pg_client.get("/sets/recent", headers=viewer_headers).json == {"sets": []}
+
+
+def test_postgres_recent_sets_require_authentication(pg_client):
+    assert pg_client.get("/sets/recent").status_code == 401
 
 
 def test_postgres_card_crud_and_card_counts(pg_client, make_user):
