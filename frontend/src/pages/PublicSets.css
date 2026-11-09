@@ -89,7 +89,71 @@
   font-weight: 700;
 }
 
+.publicsets-date-filters {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.publicsets-date-filters div {
+  display: grid;
+  gap: 8px;
+}
+
+.publicsets-date-filters label {
+  color: #40384b;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.publicsets-date-filters input {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 46px;
+  border: 1px solid #dcd5e4;
+  border-radius: 9px;
+  padding: 11px 13px;
+  background: #fdfcfe;
+  color: #24202d;
+  font: inherit;
+}
+
+.publicsets-owner-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+  border: 1px solid #dcd1e9;
+  border-radius: 999px;
+  padding: 6px 8px 6px 14px;
+  background: #f6f1fa;
+  color: #4f2683;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.publicsets-owner-filter button {
+  min-height: 32px;
+  border: 0;
+  border-radius: 999px;
+  padding: 0 11px;
+  background: #4f2683;
+  color: #fff;
+  cursor: pointer;
+  font: inherit;
+}
+
+.mysets-card .publicsets-shared-date {
+  color: #716b7b;
+  font-size: 13px;
+}
+
 @media (max-width: 420px) {
+  .publicsets-date-filters {
+    grid-template-columns: 1fr;
+  }
+
   .publicsets-pagination {
     gap: 8px;
   }

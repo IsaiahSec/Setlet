@@ -74,6 +74,32 @@ describe("MySets page", () => {
     ).toBeTruthy();
   });
 
+  test("searches the user's sets after a 300 ms debounce", async () => {
+    renderMySets();
+
+    await waitFor(() => expect(listSets).toHaveBeenCalledWith(""));
+    fireEvent.change(screen.getByLabelText("Search your sets"), {
+      target: { value: "Biology" },
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    expect(listSets).not.toHaveBeenCalledWith("Biology");
+
+    await waitFor(() => expect(listSets).toHaveBeenCalledWith("Biology"));
+  });
+
+  test("shows a distinct empty state when search has no matches", async () => {
+    renderMySets();
+
+    fireEvent.change(screen.getByLabelText("Search your sets"), {
+      target: { value: "Unknown topic" },
+    });
+
+    expect(
+      await screen.findByText("No study sets match your search.")
+    ).toBeTruthy();
+  });
+
   test("creates a set and navigates to its editor", async () => {
     createSet.mockResolvedValue({
       id: 2,
