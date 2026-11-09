@@ -647,6 +647,188 @@ def test_postgres_card_endpoints_require_authentication(pg_client):
         pg_client.patch("/sets/1/cards/1", json={"front": "Q"}).status_code == 401
     )
     assert pg_client.delete("/sets/1/cards/1").status_code == 401
+    assert pg_client.put("/sets/1/cards/order", json={"card_ids": [1]}).status_code == 401
+
+
+def test_postgres_reorder_cards_changes_get_set_order_and_persists(pg_client, make_user):
+    _, headers = make_user("card-order-owner@example.com", "correct horse")
+    study_set = create_set(pg_client, headers, "Order").json
+    first = pg_client.post(
+        f"/sets/{study_set['id']}/cards",
+        headers=headers,
+        json={"front": "One", "back": "One"},
+    ).json
+    second = pg_client.post(
+        f"/sets/{study_set['id']}/cards",
+        headers=headers,
+        json={"front": "Two", "back": "Two"},
+    ).json
+    third = pg_client.post(
+        f"/sets/{study_set['id']}/cards",
+        headers=headers,
+        json={"front": "Three", "back": "Three"},
+    ).json
+
+    reordered = pg_client.put(
+        f"/sets/{study_set['id']}/cards/order",
+        headers=headers,
+        json={"card_ids": [third["id"], first["id"], second["id"]]},
+    )
+
+    assert reordered.status_code == 200
+    assert [card["id"] for card in reordered.json["cards"]] == [
+        third["id"],
+        first["id"],
+        second["id"],
+    ]
+    assert [
+        card["id"]
+        for card in pg_client.get(f"/sets/{study_set['id']}", headers=headers).json["cards"]
+    ] == [third["id"], first["id"], second["id"]]
+
+
+def test_postgres_reorder_append_and_delete_preserve_relative_order(pg_client, make_user):
+    _, headers = make_user("card-order-append@example.com", "correct horse")
+    study_set = create_set(pg_client, headers, "Order append").json
+    first = pg_client.post(
+        f"/sets/{study_set['id']}/cards",
+        headers=headers,
+        json={"front": "One", "back": "One"},
+    ).json
+    second = pg_client.post(
+        f"/sets/{study_set['id']}/cards",
+        headers=headers,
+        json={"front": "Two", "back": "Two"},
+    ).json
+    third = pg_client.post(
+        f"/sets/{study_set['id']}/cards",
+        headers=headers,
+        json={"front": "Three", "back": "Three"},
+    ).json
+    reordered_ids = [third["id"], first["id"], second["id"]]
+    assert (
+        pg_client.put(
+            f"/sets/{study_set['id']}/cards/order",
+            headers=headers,
+            json={"card_ids": reordered_ids},
+        ).status_code
+        == 200
+    )
+
+    fourth = pg_client.post(
+        f"/sets/{study_set['id']}/cards",
+        headers=headers,
+        json={"front": "Four", "back": "Four"},
+    ).json
+    assert [
+        card["id"]
+        for card in pg_client.get(f"/sets/{study_set['id']}", headers=headers).json["cards"]
+    ] == [third["id"], first["id"], second["id"], fourth["id"]]
+
+    assert (
+        pg_client.delete(
+            f"/sets/{study_set['id']}/cards/{first['id']}", headers=headers
+        ).status_code
+        == 204
+    )
+    assert [
+        card["id"]
+        for card in pg_client.get(f"/sets/{study_set['id']}", headers=headers).json["cards"]
+    ] == [third["id"], second["id"], fourth["id"]]
+
+
+def test_postgres_reorder_rejects_invalid_card_ids_without_changes(pg_client, make_user):
+    _, headers = make_user("card-order-invalid@example.com", "correct horse")
+    study_set = create_set(pg_client, headers, "Order invalid").json
+    first = pg_client.post(
+        f"/sets/{study_set['id']}/cards",
+        headers=headers,
+        json={"front": "One", "back": "One"},
+    ).json
+    second = pg_client.post(
+        f"/sets/{study_set['id']}/cards",
+        headers=headers,
+        json={"front": "Two", "back": "Two"},
+    ).json
+    third = pg_client.post(
+        f"/sets/{study_set['id']}/cards",
+        headers=headers,
+        json={"front": "Three", "back": "Three"},
+    ).json
+    other_set = create_set(pg_client, headers, "Other set").json
+    foreign = pg_client.post(
+        f"/sets/{other_set['id']}/cards",
+        headers=headers,
+        json={"front": "Other", "back": "Other"},
+    ).json
+    baseline_ids = [first["id"], second["id"], third["id"]]
+
+    invalid_payloads = [
+        {"card_ids": [first["id"], second["id"]]},
+        {"card_ids": [first["id"], second["id"], third["id"], 999999]},
+        {"card_ids": [first["id"], first["id"], third["id"]]},
+        {"card_ids": [first["id"], second["id"], foreign["id"]]},
+        {"card_ids": "not-a-list"},
+    ]
+    for payload in invalid_payloads:
+        response = pg_client.put(
+            f"/sets/{study_set['id']}/cards/order",
+            headers=headers,
+            json=payload,
+        )
+        assert response.status_code == 400
+
+    assert [
+        card["id"]
+        for card in pg_client.get(f"/sets/{study_set['id']}", headers=headers).json["cards"]
+    ] == baseline_ids
+
+
+def test_postgres_reorder_is_owner_only_for_private_and_public_sets(pg_client, make_user):
+    _, owner_headers = make_user("card-order-private-owner@example.com", "correct horse")
+    _, other_headers = make_user("card-order-private-other@example.com", "correct horse")
+    study_set = create_set(pg_client, owner_headers, "Owner only").json
+    first = pg_client.post(
+        f"/sets/{study_set['id']}/cards",
+        headers=owner_headers,
+        json={"front": "One", "back": "One"},
+    ).json
+    second = pg_client.post(
+        f"/sets/{study_set['id']}/cards",
+        headers=owner_headers,
+        json={"front": "Two", "back": "Two"},
+    ).json
+    payload = {"card_ids": [second["id"], first["id"]]}
+
+    private_response = pg_client.put(
+        f"/sets/{study_set['id']}/cards/order",
+        headers=other_headers,
+        json=payload,
+    )
+    assert private_response.status_code == 404
+    assert private_response.json == {"error": "Set not found"}
+
+    assert (
+        pg_client.patch(
+            f"/sets/{study_set['id']}",
+            headers=owner_headers,
+            json={"visibility": "public"},
+        ).status_code
+        == 200
+    )
+    public_response = pg_client.put(
+        f"/sets/{study_set['id']}/cards/order",
+        headers=other_headers,
+        json=payload,
+    )
+    assert public_response.status_code == 404
+    assert public_response.json == {"error": "Set not found"}
+    assert [
+        card["id"]
+        for card in pg_client.get(f"/sets/{study_set['id']}", headers=owner_headers).json[
+            "cards"
+        ]
+    ] == [first["id"], second["id"]]
 
 
 def test_postgres_card_endpoints_reject_non_object_bodies(pg_client, make_user):

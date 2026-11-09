@@ -22,25 +22,25 @@ def get_study_data(set_id, user_id, now):
 
             cursor.execute(
                 "WITH due_cards AS ("
-                "SELECT c.id, c.front, c.back, FALSE AS is_new, rs.due_at "
+                "SELECT c.id, c.front, c.back, FALSE AS is_new, rs.due_at, c.position "
                 "FROM cards AS c "
                 "JOIN review_state AS rs "
                 "ON rs.card_id = c.id AND rs.user_id = %s "
                 "WHERE c.set_id = %s AND rs.due_at <= %s "
-                "ORDER BY rs.due_at ASC, c.id ASC LIMIT 50"
+                "ORDER BY rs.due_at ASC, c.position ASC, c.id ASC LIMIT 50"
                 "), new_cards AS ("
                 "SELECT c.id, c.front, c.back, TRUE AS is_new, "
-                "NULL::timestamptz AS due_at "
+                "NULL::timestamptz AS due_at, c.position "
                 "FROM cards AS c "
                 "LEFT JOIN review_state AS rs "
                 "ON rs.card_id = c.id AND rs.user_id = %s "
                 "WHERE c.set_id = %s AND rs.card_id IS NULL "
-                "ORDER BY c.id ASC LIMIT 10"
+                "ORDER BY c.position ASC, c.id ASC LIMIT 10"
                 ") "
                 "SELECT id, front, back, is_new FROM ("
                 "SELECT * FROM due_cards UNION ALL SELECT * FROM new_cards"
                 ") AS queue "
-                "ORDER BY is_new ASC, due_at ASC NULLS LAST, id ASC LIMIT 50",
+                "ORDER BY is_new ASC, due_at ASC NULLS LAST, position ASC, id ASC LIMIT 50",
                 (user_id, set_id, now, user_id, set_id),
             )
             cards = [

@@ -111,3 +111,16 @@ def delete_card(set_id, card_id):
     if not cards.delete_card(g.user_id, set_id, card_id):
         return jsonify({"error": "Not found"}), 404
     return "", 204
+
+
+@sets_bp.put("/<int:set_id>/cards/order")
+@require_auth
+def reorder_cards(set_id):
+    data = request.get_json(silent=True)
+    try:
+        result = cards_service.reorder_cards(g.user_id, set_id, data)
+    except cards_service.ValidationError as error:
+        return jsonify({"error": error.message}), 400
+    if result is None:
+        return jsonify({"error": "Set not found"}), 404
+    return jsonify({"cards": result}), 200
