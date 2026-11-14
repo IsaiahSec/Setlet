@@ -8,6 +8,7 @@ from flask.json.provider import DefaultJSONProvider
 
 from src.db import init_db
 from src.routes.auth import auth_bp
+from src.routes.notes import notes_bp
 from src.routes.reviews import reviews_bp
 from src.routes.sets import sets_bp
 
@@ -35,6 +36,7 @@ def create_app(initialize_database=True):
     app.register_blueprint(auth_bp)
     app.register_blueprint(sets_bp)
     app.register_blueprint(reviews_bp)
+    app.register_blueprint(notes_bp)
 
     if initialize_database and os.environ.get("DATABASE_URL"):
         init_db()
