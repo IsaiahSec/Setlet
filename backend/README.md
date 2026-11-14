@@ -18,6 +18,8 @@ Set these environment variables (a local `.env` file is loaded automatically):
 - `DATABASE_URL` - PostgreSQL connection string (e.g. Render's Postgres URL)
 - `SECRET_KEY` - secret used to sign auth tokens
 - `FRONTEND_ORIGIN` - allowed frontend origin for CORS (defaults to `http://localhost:5173`; set to `https://setlet.vercel.app` in production)
+- `GITHUB_FEEDBACK_TOKEN` - token used to create feedback issues in GitHub
+- `GITHUB_REPO` - GitHub repository slug in `owner/repo` format for feedback issues
 
 ## Run (development)
 
@@ -68,6 +70,7 @@ refuse to connect unless the database name ends in `_test`.
 - `GET /sets/<id>/study` - get the caller's due and new cards, plus set-wide counts.
 - `POST /cards/<card_id>/review` - rate a visible card from 1 (Again) to 4 (Easy).
 - `GET /history` - get caller-only review totals, a zero-filled UTC daily review series for the last 30 days (including today), and overdue/upcoming due counts for the next 14 days.
+- `POST /feedback` - submit authenticated user feedback (`message`, 1-2000 trimmed chars) for GitHub issue filing, limited to one success per hour.
 
 `cards` include an internal per-set `position` used for ordering. `GET
 /sets/<id>` returns cards ordered by `position`, then `id`. New cards are

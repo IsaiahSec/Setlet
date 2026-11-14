@@ -113,7 +113,7 @@ fields returned by backend JSON responses use ISO 8601 with a UTC offset.
 
 ### API
 
-MVP endpoints (`auth`, `sets`, `cards`, `reviews`) will be built first, matching the MVP scope in the project proposal and the frontend's initial page set. Feedback (GitHub API integration) and Notes/Derivation are proposal features but are explicitly excluded from MVP per the project proposal's MVP section, so their routes and services will be added after the MVP milestone, not as part of this skeleton. A `/health` endpoint currently exists as a placeholder to confirm the Flask app runs.
+MVP endpoints (`auth`, `sets`, `cards`, `reviews`) were built first. Post-MVP backend additions now include feedback submission (`POST /feedback`) with GitHub issue filing and notes/derivation work is tracked separately. A `/health` endpoint currently exists as a placeholder to confirm the Flask app runs.
 
 ---
 
@@ -125,7 +125,7 @@ PostgreSQL, hosted on Render alongside the backend, accessed via `psycopg2` rath
 
 ### Initial Data Model
 
-MVP tables, per the project proposal: `users`, `study_sets`, `cards`, `review_state`, `review_logs`, `recent_sets`. Two additional tables — `feedback_limits` and `notes` — are part of the full proposal scope but support post-MVP features, so their schemas will be implemented after the MVP milestone. `db.py` connects using the `DATABASE_URL` environment variable and creates tables on startup if they do not exist. Currently implemented:
+Implemented tables include MVP tables plus post-MVP feedback state. `db.py` connects using the `DATABASE_URL` environment variable and creates tables on startup if they do not exist. Currently implemented:
 
 - `users` - `id` (serial primary key), `email` (unique), `password_hash` (bcrypt), `created_at`
 - `study_sets` - `id`, `owner_id` (references `users`), `title`, `description`, `visibility`, `shared_at` (nullable; set when shared publicly), `created_at`, `updated_at`
@@ -150,6 +150,12 @@ MVP tables, per the project proposal: `users`, `study_sets`, `cards`, `review_st
   - `viewed_at TIMESTAMPTZ NOT NULL` stores the latest successful read time for
     `GET /sets/<set_id>` and `GET /sets/<set_id>/study`.
   - Indexed by `(user_id, viewed_at DESC)`.
+- `feedback_limits`
+  - `user_id` references `users` with `ON DELETE CASCADE` and is the primary key.
+  - `last_submitted_at TIMESTAMPTZ NOT NULL` stores each user's latest successful feedback submission time.
+- `feedback_blacklist`
+  - `user_id` references `users` with `ON DELETE CASCADE` and is the primary key.
+  - Rows are managed directly in the database to silently suppress issue filing for blacklisted users.
 
 `GET /sets/<set_id>/study` returns the visible set, the caller's due and new cards,
 and counts for the entire set. `POST /cards/<card_id>/review` validates a rating
@@ -177,7 +183,7 @@ The frontend will communicate with the backend through an API.
 
 Specific endpoints, request and response structures, and other integration details will be added as the backend structure is developed.
 
-The backend enables CORS for the origin configured by the `FRONTEND_ORIGIN` environment variable (defaulting to `http://localhost:5173`). Set it to `https://setlet.vercel.app` in production. Requests may include the `Authorization` and `Content-Type` headers.
+The backend enables CORS for the origin configured by the `FRONTEND_ORIGIN` environment variable (defaulting to `http://localhost:5173`). Set it to `https://setlet.vercel.app` in production. Requests may include the `Authorization` and `Content-Type` headers. Feedback issue filing additionally uses `GITHUB_FEEDBACK_TOKEN` and `GITHUB_REPO`.
 
 ---
 
