@@ -3,7 +3,6 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import {
   render,
   screen,
-  waitFor,
   cleanup,
 } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
@@ -94,6 +93,9 @@ describe("PublicSetView page", () => {
     expect(await screen.findByText("Biology")).toBeTruthy();
 
     expect(
+      screen.queryByRole("link", { name: "Edit this set" })
+    ).toBeNull();
+    expect(
       screen.queryByRole("button", { name: /edit/i })
     ).toBeNull();
 
@@ -102,7 +104,7 @@ describe("PublicSetView page", () => {
     ).toBeNull();
   });
 
-  test("redirects the owner to their set editor", async () => {
+  test("shows the owner an edit link without redirecting", async () => {
     getSet.mockResolvedValue({
       ...exampleSet,
       is_owner: true,
@@ -110,12 +112,11 @@ describe("PublicSetView page", () => {
 
     renderPublicSetView();
 
-    await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith(
-        "/mysets/5",
-        { replace: true }
-      );
-    });
+    expect(await screen.findByText("Biology")).toBeTruthy();
+    expect(
+      screen.getByRole("link", { name: "Edit this set" }).getAttribute("href")
+    ).toBe("/mysets/5");
+    expect(mockNavigate).not.toHaveBeenCalled();
   });
 
   test("shows Set not found for a 404 response", async () => {
