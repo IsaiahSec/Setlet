@@ -111,3 +111,48 @@
     font-size: 12px;
   }
 }
+
+@media (max-width: 420px) {
+  .app-nav-inner {
+    gap: 8px;
+  }
+
+  .app-brand {
+    gap: 5px;
+    font-size: 15px;
+  }
+
+  .app-brand-mark {
+    width: 28px;
+  }
+
+  .app-nav-links a,
+  .app-nav button {
+    padding: 0 6px;
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 360px) {
+  .app-nav-inner {
+    gap: 5px;
+  }
+
+  .app-brand {
+    font-size: 14px;
+  }
+
+  .app-brand-mark {
+    width: 26px;
+  }
+
+  .app-nav-links {
+    gap: 0;
+  }
+
+  .app-nav-links a,
+  .app-nav button {
+    padding: 0 4px;
+    font-size: 10px;
+  }
+}

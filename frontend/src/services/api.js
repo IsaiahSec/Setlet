@@ -165,6 +165,11 @@ export function reviewCard(cardId, rating) {
   });
 }
 
+// Get the current user's review history and due-card statistics
+export function getHistory() {
+  return request("/history");
+}
+
 // Get public study sets with search, filters, and pagination
 export function listPublicSets(query = "", page = 1, pageSize = 10, filters = {}) {
   const params = new URLSearchParams({
