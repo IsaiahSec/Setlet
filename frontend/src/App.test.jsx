@@ -1,10 +1,18 @@
 
 import { render, screen, cleanup, waitFor, fireEvent } from "@testing-library/react";
-import { afterEach, beforeEach, describe, test, expect } from "vitest";
+import {
+    afterEach,
+    beforeEach,
+    describe,
+    test,
+    expect,
+    vi,
+} from "vitest";
 import App from "./App";
 
 // clean up after each test
 afterEach(() => {
+    vi.unstubAllGlobals();
     cleanup();
     localStorage.clear();
     window.history.replaceState({}, "", "/");
@@ -51,6 +59,39 @@ describe("App routing", () => {
         await waitFor(() => {
             expect(window.location.pathname).toBe("/login");
         });
+    });
+
+    test("protects the feedback route from signed-out users", async () => {
+        window.history.replaceState({}, "", "/feedback");
+
+        render(<App />);
+
+        await waitFor(() => {
+            expect(window.location.pathname).toBe("/login");
+        });
+        expect(screen.queryByRole("link", { name: "Feedback" })).toBeNull();
+    });
+
+    test("shows the feedback page and navigation link for signed-in users", async () => {
+        localStorage.setItem("token", "feedback-token");
+        window.history.replaceState({}, "", "/feedback");
+        vi.stubGlobal(
+            "fetch",
+            vi.fn().mockResolvedValue({
+                ok: true,
+                status: 201,
+                json: async () => ({ message: "Thanks for your feedback" }),
+            })
+        );
+
+        render(<App />);
+
+        expect(
+            await screen.findByRole("heading", { name: "Send Feedback" })
+        ).toBeTruthy();
+        expect(
+            screen.getByRole("link", { name: "Feedback" }).getAttribute("href")
+        ).toBe("/feedback");
     });
 
     // logout clears token and hides navigation

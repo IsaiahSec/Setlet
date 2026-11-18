@@ -8,6 +8,7 @@ import {
     request,
     reorderCards,
     listSets,
+    sendFeedback,
     listPublicSets,
 } from "./api";
 
@@ -137,6 +138,30 @@ describe("study set listing API", () => {
 
         expect(fetch.mock.calls[1][0]).toMatch(
             /\/sets\/public\?q=Biology&page=2&page_size=10&owner_id=7&shared_from=2025-01-01&shared_to=2025-02-01$/
+        );
+    });
+});
+
+describe("feedback API", () => {
+    test("posts the message to the authenticated feedback endpoint", async () => {
+        setToken("feedback-token");
+        fetch.mockResolvedValue({
+            ok: true,
+            status: 201,
+            json: async () => ({ message: "Thanks for your feedback" }),
+        });
+
+        await sendFeedback("A useful suggestion");
+
+        expect(fetch).toHaveBeenCalledWith(
+            expect.stringMatching(/\/feedback$/),
+            expect.objectContaining({
+                method: "POST",
+                body: JSON.stringify({ message: "A useful suggestion" }),
+                headers: expect.objectContaining({
+                    Authorization: "Bearer feedback-token",
+                }),
+            })
         );
     });
 });
