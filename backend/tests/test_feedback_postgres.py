@@ -92,7 +92,7 @@ def test_feedback_rate_limited_until_an_hour_passes(pg_client, make_user, monkey
 def test_failed_submission_does_not_consume_hourly_limit(pg_client, make_user, monkeypatch):
     user_id, headers = make_user("feedback-failed-window@example.com", "correct horse")
     monkeypatch.setattr(feedback_service, "utcnow", lambda: NOW)
-    monkeypatch.setattr(github_service, "create_feedback_issue", lambda *_: None)
+    monkeypatch.setattr(github_service, "create_feedback_issue", lambda **_: None)
 
     first = pg_client.post("/feedback", headers=headers, json={"message": "First"})
     assert first.status_code == 201
@@ -100,14 +100,14 @@ def test_failed_submission_does_not_consume_hourly_limit(pg_client, make_user, m
 
     monkeypatch.setattr(feedback_service, "utcnow", lambda: NOW + timedelta(hours=1, seconds=1))
 
-    def raise_issue(*_):
+    def raise_issue(**_):
         raise github_service.GitHubFeedbackError("boom")
 
     monkeypatch.setattr(github_service, "create_feedback_issue", raise_issue)
     failed = pg_client.post("/feedback", headers=headers, json={"message": "Second"})
     assert fetch_feedback_limit(user_id) == NOW
 
-    monkeypatch.setattr(github_service, "create_feedback_issue", lambda *_: None)
+    monkeypatch.setattr(github_service, "create_feedback_issue", lambda **_: None)
     monkeypatch.setattr(feedback_service, "utcnow", lambda: NOW + timedelta(hours=1, seconds=2))
     retry = pg_client.post("/feedback", headers=headers, json={"message": "Retry"})
 
@@ -124,7 +124,7 @@ def test_github_failure_returns_502_and_allows_immediate_retry(
     monkeypatch.setattr(feedback_service, "utcnow", lambda: NOW)
     attempts = {"count": 0}
 
-    def flaky_create_issue(*_):
+    def flaky_create_issue(**_):
         attempts["count"] += 1
         if attempts["count"] == 1:
             raise github_service.GitHubFeedbackError("down")
@@ -201,7 +201,7 @@ def test_feedback_concurrent_requests_allow_only_one_success(
     monkeypatch.setattr(feedback_service, "utcnow", lambda: NOW)
     calls = {"count": 0}
 
-    def slow_create_issue(*_):
+    def slow_create_issue(**_):
         calls["count"] += 1
         time.sleep(0.2)
 
@@ -276,3 +276,42 @@ def test_feedback_missing_github_config_returns_502(pg_client, make_user, monkey
     assert response.status_code == 502
     assert response.json == {"error": "Could not send feedback right now"}
     assert fetch_feedback_limit(user_id) is None
+
+
+def test_feedback_request_construction_error_returns_502_and_does_not_consume_limit(
+    pg_client, make_user, monkeypatch
+):
+    user_id, headers = make_user("feedback-invalid-request@example.com", "correct horse")
+    monkeypatch.setattr(feedback_service, "utcnow", lambda: NOW)
+    monkeypatch.setenv("GITHUB_FEEDBACK_TOKEN", "test-token")
+    monkeypatch.setenv("GITHUB_REPO", "owner/repo")
+
+    original_request = github_service.request.Request
+
+    def invalid_request(*args, **kwargs):
+        raise ValueError("bad request")
+
+    monkeypatch.setattr(github_service.request, "Request", invalid_request)
+    failed = pg_client.post("/feedback", headers=headers, json={"message": "Will fail"})
+
+    monkeypatch.setattr(github_service.request, "Request", original_request)
+
+    class FakeResponse:
+        status = 201
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+    monkeypatch.setattr(
+        github_service.request, "urlopen", lambda *_args, **_kwargs: FakeResponse()
+    )
+    retry = pg_client.post("/feedback", headers=headers, json={"message": "Retry now"})
+
+    assert failed.status_code == 502
+    assert failed.json == {"error": "Could not send feedback right now"}
+    assert fetch_feedback_limit(user_id) is None
+    assert retry.status_code == 201
+    assert fetch_feedback_limit(user_id) == NOW

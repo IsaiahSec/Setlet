@@ -1,5 +1,5 @@
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
   getSet,
@@ -7,6 +7,7 @@ import {
   createCard,
   updateCard,
   deleteCard,
+  reorderCards,
 } from "../services/api";
 import "./SetEditor.css";
 
@@ -24,6 +25,8 @@ function SetEditor() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [reordering, setReordering] = useState(false);
+  const reorderInFlight = useRef(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
@@ -211,6 +214,38 @@ async function handleVisibilityChange(event) {
       setError(err.message);
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleReorderCard(index, direction) {
+    if (reorderInFlight.current) return;
+
+    const targetIndex = index + direction;
+    if (targetIndex < 0 || targetIndex >= cards.length) return;
+
+    const reorderedCards = [...cards];
+    [reorderedCards[index], reorderedCards[targetIndex]] = [
+      reorderedCards[targetIndex],
+      reorderedCards[index],
+    ];
+
+    reorderInFlight.current = true;
+    setReordering(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      await reorderCards(
+        setId,
+        reorderedCards.map((card) => card.id)
+      );
+      setCards(reorderedCards);
+      setSuccess("Card order updated successfully.");
+    } catch (err) {
+      setError(err.message || "Unable to reorder cards. Please try again.");
+    } finally {
+      reorderInFlight.current = false;
+      setReordering(false);
     }
   }
 
@@ -429,6 +464,20 @@ async function handleVisibilityChange(event) {
                       />
 
                       <div className="seteditor-actions">
+                        <button
+                          type="button"
+                          disabled={reordering || index === 0}
+                          onClick={() => handleReorderCard(index, -1)}
+                        >
+                          Move up
+                        </button>
+                        <button
+                          type="button"
+                          disabled={reordering || index === cards.length - 1}
+                          onClick={() => handleReorderCard(index, 1)}
+                        >
+                          Move down
+                        </button>
                         <button
                           type="button"
                           disabled={saving}

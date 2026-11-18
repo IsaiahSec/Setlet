@@ -143,6 +143,15 @@ export function deleteCard(setId, cardId) {
         method: "DELETE",
     });
 }
+
+// Reorder all cards in a study set
+export function reorderCards(setId, cardIds) {
+  return request(`/sets/${setId}/cards/order`, {
+    method: "PUT",
+    body: JSON.stringify({ card_ids: cardIds }),
+  });
+}
+
 // Get the flashcards for a study session
 export function getStudySession(setId) {
   return request(`/sets/${setId}/study`);
