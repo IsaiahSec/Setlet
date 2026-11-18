@@ -8,6 +8,7 @@ import {
     request,
     reorderCards,
     listSets,
+    getHistory,
     listPublicSets,
 } from "./api";
 
@@ -137,6 +138,23 @@ describe("study set listing API", () => {
 
         expect(fetch.mock.calls[1][0]).toMatch(
             /\/sets\/public\?q=Biology&page=2&page_size=10&owner_id=7&shared_from=2025-01-01&shared_to=2025-02-01$/
+        );
+    });
+});
+
+describe("review history API", () => {
+    test("requests the authenticated history endpoint", async () => {
+        fetch.mockResolvedValue({
+            ok: true,
+            status: 200,
+            json: async () => ({ totals: {}, last_30_days: [], upcoming: {} }),
+        });
+
+        await getHistory();
+
+        expect(fetch).toHaveBeenCalledWith(
+            expect.stringMatching(/\/history$/),
+            expect.objectContaining({ method: "GET" })
         );
     });
 });
