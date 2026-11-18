@@ -1,0 +1,309 @@
+.notes-page {
+  min-height: calc(100vh - 72px);
+  padding: 40px 24px 70px;
+}
+
+.notes-container {
+  width: min(940px, 100%);
+  margin: 0 auto;
+}
+
+.notes-header {
+  margin-bottom: 26px;
+}
+
+.notes-kicker {
+  display: block;
+  margin-bottom: 10px;
+  color: #63349a;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.notes-header h1 {
+  margin: 0 0 8px;
+  color: #291344;
+  font-family: Manrope, "Avenir Next", sans-serif;
+  font-size: clamp(30px, 4vw, 39px);
+  font-weight: 800;
+  line-height: 1.18;
+}
+
+.notes-header p {
+  margin: 0;
+  color: #716b7b;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.notes-panel {
+  margin-bottom: 20px;
+  border: 1px solid #e7e1ed;
+  border-radius: 14px;
+  padding: clamp(20px, 3vw, 28px);
+  background: rgb(255 255 255 / 94%);
+  box-shadow: 0 8px 24px rgb(42 22 67 / 5%);
+}
+
+.notes-panel h2 {
+  margin: 0 0 18px;
+  color: #291344;
+  font-family: Manrope, "Avenir Next", sans-serif;
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.notes-form {
+  display: grid;
+  gap: 10px;
+}
+
+.notes-form label {
+  color: #40384b;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.notes-form input,
+.notes-form textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 46px;
+  border: 1px solid #dcd5e4;
+  border-radius: 9px;
+  padding: 11px 13px;
+  background: #fdfcfe;
+  color: #24202d;
+  font: inherit;
+  line-height: 1.5;
+  transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+}
+
+.notes-form textarea {
+  min-height: 140px;
+  resize: vertical;
+}
+
+.notes-form input:focus,
+.notes-form textarea:focus {
+  border-color: #63349a;
+  outline: 0;
+  background: #fff;
+  box-shadow: 0 0 0 4px rgb(99 52 154 / 10%);
+}
+
+.notes-form button {
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  justify-self: start;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 0 16px;
+  background: linear-gradient(125deg, #4f2683, #684199);
+  color: #fff;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: transform 160ms ease, background-color 160ms ease, box-shadow 160ms ease;
+}
+
+.notes-form button:hover {
+  transform: translateY(-1px);
+  background: #39205d;
+  color: #fff;
+  box-shadow: 0 7px 15px rgb(57 32 93 / 18%);
+}
+
+.notes-form button:disabled,
+.notes-delete-confirm button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.notes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  gap: 14px;
+}
+
+.notes-card {
+  position: relative;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid #e7e1ed;
+  border-radius: 12px;
+  padding: 20px;
+  background: linear-gradient(155deg, #fff, #faf7fd);
+  box-shadow: 0 2px 6px rgb(42 22 67 / 3%);
+  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.notes-card::before {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 4px;
+  background: linear-gradient(90deg, #4f2683, #9d7abd);
+  content: "";
+}
+
+.notes-card:hover {
+  transform: translateY(-3px);
+  border-color: #d3c4e3;
+  box-shadow: 0 14px 30px rgb(42 22 67 / 10%);
+}
+
+.notes-card h3 {
+  margin: 0 0 11px;
+  font-family: Manrope, "Avenir Next", sans-serif;
+  font-size: 17px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.notes-card h3 a {
+  color: #291344;
+  text-decoration: none;
+}
+
+.notes-card h3 a:hover {
+  color: #63349a;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.notes-card time {
+  color: #716b7b;
+  font-size: 12px;
+}
+
+.notes-empty,
+.notes-status {
+  margin: 0;
+  color: #716b7b;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.notes-error {
+  margin: 2px 0;
+  border: 1px solid #f0c4c4;
+  border-radius: 9px;
+  padding: 12px 14px;
+  background: #fff3f2;
+  color: #9c2c2c;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.notes-success {
+  margin: 2px 0;
+  border: 1px solid #b9dec3;
+  border-radius: 9px;
+  padding: 12px 14px;
+  background: #effaf1;
+  color: #27613a;
+  font-size: 14px;
+}
+
+.notes-back {
+  display: inline-flex;
+  margin-bottom: 20px;
+  color: #4f2683;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.notes-back:hover {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.notes-actions,
+.notes-delete-confirm {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+
+.notes-actions {
+  margin-top: 6px;
+}
+
+.notes-actions button,
+.notes-delete-confirm button {
+  min-height: 40px;
+  border: 0;
+  border-radius: 8px;
+  padding: 0 15px;
+  background: #4f2683;
+  color: #fff;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.notes-actions button:hover,
+.notes-delete-confirm button:hover {
+  background: #39205d;
+}
+
+.notes-actions .notes-danger-button,
+.notes-delete-confirm .notes-danger-button {
+  background: #a63d4b;
+}
+
+.notes-actions .notes-danger-button:hover,
+.notes-delete-confirm .notes-danger-button:hover {
+  background: #842d39;
+}
+
+.notes-delete-confirm {
+  margin-top: 20px;
+  border: 1px solid #ead3d6;
+  border-radius: 10px;
+  padding: 14px;
+  background: #fff8f8;
+}
+
+.notes-delete-confirm p {
+  flex: 1 1 100%;
+  margin: 0;
+  color: #5e3a40;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.notes-delete-confirm .notes-secondary-button {
+  border: 1px solid #dcd5e4;
+  background: #fff;
+  color: #51495b;
+}
+
+.notes-delete-confirm .notes-secondary-button:hover {
+  background: #f5f2f7;
+}
+
+@media (max-width: 600px) {
+  .notes-page {
+    min-height: calc(100vh - 62px);
+    padding: 30px 14px 52px;
+  }
+
+  .notes-header {
+    margin-bottom: 21px;
+  }
+
+  .notes-panel {
+    padding: 19px 16px;
+  }
+}

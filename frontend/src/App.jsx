@@ -17,6 +17,8 @@ import SetEditor from "./pages/SetEditor";
 import StudyReview from "./pages/StudyReview";
 import FlipThrough from "./pages/FlipThrough";
 import PublicSetView from "./pages/PublicSetView";
+import Notes from "./pages/Notes";
+import NoteDetail from "./pages/NoteDetail";
 
 import ProtectedRoute from "./components/ProtectedRoute";
 import { getToken, clearToken } from "./services/api";
@@ -44,6 +46,7 @@ function Navigation({ isLoggedIn, onLogout }) {
         <div className="app-nav-links">
           <Link to="/mysets">My Sets</Link>
           <Link to="/public">Public Sets</Link>
+          <Link to="/notes">Notes</Link>
           <button type="button" onClick={handleLogout}>
             Log out
           </button>
@@ -106,6 +109,8 @@ function App() {
           <Route path="/public/:setId" element={<PublicSetView />} />
           <Route path="/study/:setId" element={<StudyReview />} />
           <Route path="/flip/:setId" element={<FlipThrough />} />
+          <Route path="/notes" element={<Notes />} />
+          <Route path="/notes/:noteId" element={<NoteDetail />} />
         </Route>
 
         {/* unknown paths redirect home */}
