@@ -294,6 +294,10 @@ def test_feedback_request_construction_error_returns_502_and_does_not_consume_li
     monkeypatch.setattr(github_service.request, "Request", invalid_request)
     failed = pg_client.post("/feedback", headers=headers, json={"message": "Will fail"})
 
+    assert failed.status_code == 502
+    assert failed.json == {"error": "Could not send feedback right now"}
+    assert fetch_feedback_limit(user_id) is None
+
     monkeypatch.setattr(github_service.request, "Request", original_request)
 
     class FakeResponse:
@@ -310,8 +314,5 @@ def test_feedback_request_construction_error_returns_502_and_does_not_consume_li
     )
     retry = pg_client.post("/feedback", headers=headers, json={"message": "Retry now"})
 
-    assert failed.status_code == 502
-    assert failed.json == {"error": "Could not send feedback right now"}
-    assert fetch_feedback_limit(user_id) is None
     assert retry.status_code == 201
     assert fetch_feedback_limit(user_id) == NOW
