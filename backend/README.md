@@ -59,6 +59,11 @@ refuse to connect unless the database name ends in `_test`.
 - `GET /sets/public?q=<text>&owner_id=<id>&shared_from=<YYYY-MM-DD>&shared_to=<YYYY-MM-DD>&page=<n>&page_size=<n>` - search public study sets owned by other users, with optional owner/shared-date filters and pagination.
 - `GET /sets/<id>` - read one of the authenticated user's study sets or a public set; includes cards, `owner_id`, `owner_name`, and `is_owner`.
 - `GET /sets/recent` - list up to 4 recently viewed readable sets for the authenticated user, most recent first.
+- `POST /notes` - create an authenticated user's note (`title` 1–200 trimmed chars, `body` 1–50,000 chars).
+- `GET /notes` - list only the authenticated user's notes (id/title/created_at), newest first.
+- `GET /notes/<id>` - fetch an authenticated user's note by id.
+- `PATCH /notes/<id>` - update `title` and/or `body` on an authenticated user's note; non-allow-listed fields are ignored.
+- `DELETE /notes/<id>` - delete an authenticated user's note.
 - `PATCH /sets/<id>` - rename, update the description, or set visibility to `private` or `public` on an owned study set.
 - `DELETE /sets/<id>` - delete an owned study set.
 - `POST /sets/<id>/cards` - add a card to an owned set (`front` and `back`, each 1–2,000 trimmed characters).
@@ -93,6 +98,10 @@ set is not visible to the caller.
 
 `GET /history` also requires authentication. It returns only aggregate counts
 for the caller and no card/set text.
+
+Notes are owner-scoped in SQL (`id = <note_id> AND user_id = <caller_id>`), so
+missing notes and non-owned notes both return `{"error":"Note not found"}`.
+Deleting a user cascades to that user's notes.
 
 `GET /sets/public` requires authentication and returns only other users' public
 sets. Search is case-insensitive across titles and descriptions, matching all
