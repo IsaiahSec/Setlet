@@ -114,6 +114,7 @@ fields returned by backend JSON responses use ISO 8601 with a UTC offset.
 ### API
 
 Implemented backend endpoints include `auth`, `sets`, `cards`, `reviews`, and owner-scoped `notes`. Notes routes are authenticated and enforce ownership in SQL (`id = note_id AND user_id = caller_id`) for reads, updates, and deletes. A `/health` endpoint currently exists as a placeholder to confirm the Flask app runs.
+Post-MVP backend additions also include feedback submission (`POST /feedback`) with GitHub issue filing.
 
 ---
 
@@ -150,6 +151,12 @@ PostgreSQL, hosted on Render alongside the backend, accessed via `psycopg2` rath
   - `viewed_at TIMESTAMPTZ NOT NULL` stores the latest successful read time for
     `GET /sets/<set_id>` and `GET /sets/<set_id>/study`.
   - Indexed by `(user_id, viewed_at DESC)`.
+- `feedback_limits`
+  - `user_id` references `users` with `ON DELETE CASCADE` and is the primary key.
+  - `last_submitted_at TIMESTAMPTZ NOT NULL` stores each user's latest successful feedback submission time.
+- `feedback_blacklist`
+  - `user_id` references `users` with `ON DELETE CASCADE` and is the primary key.
+  - Rows are managed directly in the database to silently suppress issue filing for blacklisted users.
 - `notes`
   - `id SERIAL PRIMARY KEY`; `user_id` references `users` with `ON DELETE CASCADE`.
   - `title TEXT NOT NULL`, `body TEXT NOT NULL`, `created_at TIMESTAMPTZ NOT NULL DEFAULT now()`.
@@ -186,7 +193,7 @@ The frontend will communicate with the backend through an API.
 
 Specific endpoints, request and response structures, and other integration details will be added as the backend structure is developed.
 
-The backend enables CORS for the origin configured by the `FRONTEND_ORIGIN` environment variable (defaulting to `http://localhost:5173`). Set it to `https://setlet.vercel.app` in production. Requests may include the `Authorization` and `Content-Type` headers.
+The backend enables CORS for the origin configured by the `FRONTEND_ORIGIN` environment variable (defaulting to `http://localhost:5173`). Set it to `https://setlet.vercel.app` in production. Requests may include the `Authorization` and `Content-Type` headers. Feedback issue filing additionally uses `GITHUB_FEEDBACK_TOKEN` and `GITHUB_REPO`.
 
 ---
 
