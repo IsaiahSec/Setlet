@@ -111,3 +111,32 @@
     font-size: 12px;
   }
 }
+
+@media (max-width: 420px) {
+  .app-nav {
+    padding: 0 10px;
+  }
+
+  .app-nav-inner {
+    gap: 6px;
+  }
+
+  .app-brand {
+    gap: 5px;
+    font-size: 15px;
+  }
+
+  .app-brand-mark {
+    width: 27px;
+  }
+
+  .app-nav-links {
+    gap: 0;
+  }
+
+  .app-nav-links a,
+  .app-nav button {
+    padding: 0 6px;
+    font-size: 10px;
+  }
+}

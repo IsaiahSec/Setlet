@@ -165,6 +165,14 @@ export function reviewCard(cardId, rating) {
   });
 }
 
+// Submit feedback from the current user
+export function sendFeedback(message) {
+  return request("/feedback", {
+    method: "POST",
+    body: JSON.stringify({ message }),
+  });
+}
+
 // Get public study sets with search, filters, and pagination
 export function listPublicSets(query = "", page = 1, pageSize = 10, filters = {}) {
   const params = new URLSearchParams({
