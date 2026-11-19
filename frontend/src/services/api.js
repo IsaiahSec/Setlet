@@ -198,6 +198,13 @@ export function deleteNote(id) {
   });
 }
 
+// Derive candidate cards from one of the current user's notes
+export function deriveCards(id) {
+  return request(`/notes/${id}/derive`, {
+    method: "POST",
+  });
+}
+
 // Get public study sets with search, filters, and pagination
 export function listPublicSets(query = "", page = 1, pageSize = 10, filters = {}) {
   const params = new URLSearchParams({
