@@ -66,6 +66,7 @@ refuse to connect unless the database name ends in `_test`.
 - `GET /notes/<id>` - fetch an authenticated user's note by id.
 - `PATCH /notes/<id>` - update `title` and/or `body` on an authenticated user's note; non-allow-listed fields are ignored.
 - `DELETE /notes/<id>` - delete an authenticated user's note.
+- `POST /notes/<id>/derive` - derive up to 200 candidate cards from an owned note using local pattern matching; this endpoint writes no cards or sets.
 - `PATCH /sets/<id>` - rename, update the description, or set visibility to `private` or `public` on an owned study set.
 - `DELETE /sets/<id>` - delete an owned study set.
 - `POST /sets/<id>/cards` - add a card to an owned set (`front` and `back`, each 1–2,000 trimmed characters).
@@ -106,6 +107,13 @@ Notes are owner-scoped in SQL (`id = <note_id> AND user_id = <caller_id>`), so
 missing notes and non-owned notes both return `{"error":"Note not found"}`.
 Deleting a user cascades to that user's notes.
 
+`POST /notes/<id>/derive` requires authentication and owner access. It parses
+colon and space-padded dash separators in note lines, with support for common
+list markers, and returns `{"cards": [...]}`. It skips blank or unrecognized
+lines, duplicate pairs, empty fields, and fields outside the card limit of
+1–2,000 characters, and returns at most 200 cards. It does not save any derived
+cards or create a set.
+
 `GET /sets/public` requires authentication and returns only other users' public
 sets. Search is case-insensitive across titles and descriptions, matching all
 of up to five whitespace-separated terms. Pagination defaults to page 1 with
@@ -122,7 +130,7 @@ offset (for example, `2026-10-24T21:13:00+00:00`).
 ## Structure
 
 - `src/routes/` - Flask route/blueprint definitions (one file per resource: sets, reviews, auth, etc.)
-- `src/services/` - business logic (review validation and SM-2 scheduling)
+- `src/services/` - business logic (review validation, SM-2 scheduling, and note parsing)
 - `src/models/` - raw SQL data-access functions per table (no ORM)
 - `src/db.py` - PostgreSQL connection handling (psycopg2)
 - `tests/` - pytest test suite, mirrors the `src/` structure

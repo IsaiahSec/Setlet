@@ -179,6 +179,12 @@ The authenticated set API supports creating, updating, deleting, and reordering 
 `PATCH /notes/<id>` return full note data. Missing or non-owned notes both
 return `404` with `{"error": "Note not found"}`.
 
+`POST /notes/<note_id>/derive` is an authenticated, owner-only, read-only
+operation that uses local pattern matching to return candidate cards. It does
+not create cards or study sets. The parser recognizes the earliest colon or
+space-padded dash, removes one leading list marker, skips invalid or overlong
+fields, deduplicates pairs, and caps output at 200 cards.
+
 ---
 
 ## 4. Authentication and Authorization
@@ -241,6 +247,7 @@ project/
 │   │   │   ├── auth.py
 │   │   │   ├── cards.py
 │   │   │   ├── notes.py
+│   │   │   ├── note_parser.py
 │   │   │   ├── review.py
 │   │   │   └── study_sets.py
 │   │   ├── models/
