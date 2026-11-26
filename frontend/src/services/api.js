@@ -170,6 +170,14 @@ export function reviewCard(cardId, rating) {
   });
 }
 
+// Submit feedback from the current user
+export function sendFeedback(message) {
+  return request("/feedback", {
+    method: "POST",
+    body: JSON.stringify({ message }),
+  });
+}
+
 // List the current user's notes
 export function listNotes() {
   return request("/notes");

@@ -9,6 +9,7 @@ import {
     reorderCards,
     listSets,
     deriveCards,
+    sendFeedback,
     listNotes,
     getNote,
     createNote,
@@ -160,6 +161,30 @@ describe("study set listing API", () => {
         expect(fetch).toHaveBeenCalledWith(
             expect.stringMatching(/\/sets\/recent$/),
             expect.objectContaining({ method: "GET" })
+        );
+    });
+});
+
+describe("feedback API", () => {
+    test("posts the message to the authenticated feedback endpoint", async () => {
+        setToken("feedback-token");
+        fetch.mockResolvedValue({
+            ok: true,
+            status: 201,
+            json: async () => ({ message: "Thanks for your feedback" }),
+        });
+
+        await sendFeedback("A useful suggestion");
+
+        expect(fetch).toHaveBeenCalledWith(
+            expect.stringMatching(/\/feedback$/),
+            expect.objectContaining({
+                method: "POST",
+                body: JSON.stringify({ message: "A useful suggestion" }),
+                headers: expect.objectContaining({
+                    Authorization: "Bearer feedback-token",
+                }),
+            })
         );
     });
 });
