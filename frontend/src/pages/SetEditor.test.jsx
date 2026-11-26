@@ -20,10 +20,22 @@ vi.mock("../services/api", () => ({
   reorderCards: vi.fn(),
 }));
 
+const mockNavigate = vi.hoisted(() => vi.fn());
+
+vi.mock("react-router-dom", async () => {
+  const actual = await vi.importActual("react-router-dom");
+
+  return {
+    ...actual,
+    useNavigate: () => mockNavigate,
+  };
+});
+
 const sampleSet = {
   id: 2,
   title: "Biology Chapter 1",
   description: "Cells",
+  is_owner: true,
   cards: [
     {
       id: 1,
@@ -102,6 +114,26 @@ describe("Set Editor", () => {
     expect(screen.getByText("Cards (1)")).toBeTruthy();
 
     expect(api.getSet).toHaveBeenCalledWith("2");
+  });
+
+  it("redirects non-owners without rendering editing controls", async () => {
+    api.getSet.mockResolvedValue({
+      ...sampleSet,
+      is_owner: false,
+    });
+
+    renderEditor();
+
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith("/public/2", {
+        replace: true,
+      });
+    });
+
+    expect(screen.queryByLabelText("Visibility")).toBeNull();
+    expect(screen.queryByLabelText("set-title")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Save Changes" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Create Card" })).toBeNull();
   });
 
   it("provides a Flip through link for the current set", async () => {

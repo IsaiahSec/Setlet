@@ -70,6 +70,12 @@ describe("PublicSets page", () => {
     expect(listSets).toHaveBeenCalledWith("");
   });
 
+  test("limits search input to 100 characters", () => {
+    renderPublicSets();
+
+    expect(screen.getByLabelText("Search public sets").maxLength).toBe(100);
+  });
+
   test("filters to the signed-in user's public sets and clears the filter", async () => {
     listSets.mockResolvedValue([
       {

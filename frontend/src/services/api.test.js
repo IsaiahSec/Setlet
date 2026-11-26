@@ -14,6 +14,7 @@ import {
     createNote,
     updateNote,
     deleteNote,
+    getHistory,
     listRecentSets,
     listPublicSets,
 } from "./api";
@@ -237,6 +238,19 @@ describe("note card derivation API", () => {
         expect(fetch.mock.calls[0][1].body).toBeUndefined();
         expect(fetch.mock.calls[0][1].headers.Authorization).toBe(
             "Bearer notes-token"
+describe("review history API", () => {
+    test("requests the authenticated history endpoint", async () => {
+        fetch.mockResolvedValue({
+            ok: true,
+            status: 200,
+            json: async () => ({ totals: {}, last_30_days: [], upcoming: {} }),
+        });
+
+        await getHistory();
+
+        expect(fetch).toHaveBeenCalledWith(
+            expect.stringMatching(/\/history$/),
+            expect.objectContaining({ method: "GET" })
         );
     });
 });

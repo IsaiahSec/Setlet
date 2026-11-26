@@ -84,10 +84,10 @@ describe("FlipThrough page", () => {
     await screen.findByText("First front");
 
     fireEvent.keyDown(window, { key: "ArrowRight" });
-    expect(screen.getByText("Second front")).toBeTruthy();
+    expect(await screen.findByText("Second front")).toBeTruthy();
 
     fireEvent.keyDown(window, { key: "ArrowLeft" });
-    expect(screen.getByText("First front")).toBeTruthy();
+    expect(await screen.findByText("First front")).toBeTruthy();
   });
 
   test("shuffle retains every card without duplication", async () => {
