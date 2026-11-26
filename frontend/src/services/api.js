@@ -91,6 +91,11 @@ export function listSets(query = "") {
   return request(`/sets?${params.toString()}`);
 }
 
+// get the current user's recently viewed study sets
+export function listRecentSets() {
+  return request("/sets/recent");
+}
+
 // create a new study set
 export function createSet(title, description = "") {
   return request("/sets", {

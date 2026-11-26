@@ -1,13 +1,19 @@
 
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { listSets, createSet, deleteSet } from "../services/api";
+import {
+  listSets,
+  listRecentSets,
+  createSet,
+  deleteSet,
+} from "../services/api";
 import "./MySets.css";
 
 function MySets() {
   const navigate = useNavigate();
 
   const [sets, setSets] = useState([]);
+  const [recentSets, setRecentSets] = useState([]);
   const [search, setSearch] = useState("");
   const [query, setQuery] = useState("");
   const [title, setTitle] = useState("");
@@ -58,6 +64,29 @@ function MySets() {
       active = false;
     };
   }, [query]);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadRecentSets() {
+      try {
+        const data = await listRecentSets();
+        if (active) {
+          setRecentSets(
+            Array.isArray(data?.sets) ? data.sets.slice(0, 4) : []
+          );
+        }
+      } catch {
+        if (active) setRecentSets([]);
+      }
+    }
+
+    loadRecentSets();
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   async function handleCreate(event) {
     event.preventDefault();
@@ -167,6 +196,35 @@ function MySets() {
           <p role="alert" className="mysets-error">
             {error}
           </p>
+        )}
+
+        {recentSets.length > 0 && (
+          <section
+            className="mysets-panel"
+            aria-labelledby="recent-sets-heading"
+          >
+            <h2 id="recent-sets-heading">Recently viewed</h2>
+            <div className="mysets-recent-grid">
+              {recentSets.map((set) => (
+                <article className="mysets-recent-card" key={set.id}>
+                  <h3>
+                    <Link
+                      to={
+                        set.is_owner
+                          ? `/mysets/${set.id}`
+                          : `/public/${set.id}`
+                      }
+                    >
+                      {set.title}
+                    </Link>
+                  </h3>
+                  {!set.is_owner && set.owner_name && (
+                    <p>By {set.owner_name}</p>
+                  )}
+                </article>
+              ))}
+            </div>
+          </section>
         )}
 
         <section className="mysets-panel">

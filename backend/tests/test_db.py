@@ -24,6 +24,8 @@ def test_init_db_creates_users_table(store):
     assert any("CREATE TABLE IF NOT EXISTS cards" in sql for sql in store["executed"])
     assert any("CREATE TABLE IF NOT EXISTS review_state" in sql for sql in store["executed"])
     assert any("CREATE TABLE IF NOT EXISTS review_logs" in sql for sql in store["executed"])
+    assert any("CREATE TABLE IF NOT EXISTS feedback_limits" in sql for sql in store["executed"])
+    assert any("CREATE TABLE IF NOT EXISTS feedback_blacklist" in sql for sql in store["executed"])
     assert any("CREATE INDEX IF NOT EXISTS study_sets_owner_id_idx" in sql for sql in store["executed"])
     assert any(
         "CREATE INDEX IF NOT EXISTS cards_set_id_idx" in sql
