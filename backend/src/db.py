@@ -75,6 +75,19 @@ CREATE TABLE IF NOT EXISTS recent_sets (
 )
 """
 
+FEEDBACK_LIMITS_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS feedback_limits (
+    user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    last_submitted_at TIMESTAMPTZ NOT NULL
+)
+"""
+
+FEEDBACK_BLACKLIST_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS feedback_blacklist (
+    user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE
+)
+"""
+
 NOTES_TABLE_SQL = """
 CREATE TABLE IF NOT EXISTS notes (
     id SERIAL PRIMARY KEY,
@@ -128,6 +141,8 @@ def init_db():
             cur.execute(REVIEW_STATE_TABLE_SQL)
             cur.execute(REVIEW_LOGS_TABLE_SQL)
             cur.execute(RECENT_SETS_TABLE_SQL)
+            cur.execute(FEEDBACK_LIMITS_TABLE_SQL)
+            cur.execute(FEEDBACK_BLACKLIST_TABLE_SQL)
             cur.execute(NOTES_TABLE_SQL)
             cur.execute(
                 "CREATE INDEX IF NOT EXISTS study_sets_owner_id_idx "

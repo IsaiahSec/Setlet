@@ -9,12 +9,18 @@ import {
 } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import MySets from "./MySets";
-import { listSets, createSet, deleteSet } from "../services/api";
+import {
+  listSets,
+  listRecentSets,
+  createSet,
+  deleteSet,
+} from "../services/api";
 
 const mockNavigate = vi.fn();
 
 vi.mock("../services/api", () => ({
   listSets: vi.fn(),
+  listRecentSets: vi.fn(),
   createSet: vi.fn(),
   deleteSet: vi.fn(),
 }));
@@ -41,6 +47,7 @@ describe("MySets page", () => {
     cleanup();
     vi.resetAllMocks();
     listSets.mockResolvedValue([]);
+    listRecentSets.mockResolvedValue({ sets: [] });
   });
 
   test("displays the user's study sets", async () => {
@@ -72,6 +79,67 @@ describe("MySets page", () => {
         "No study sets yet. Create your first set above!"
       )
     ).toBeTruthy();
+  });
+
+  test("renders recent sets with owner-aware links and names", async () => {
+    listRecentSets.mockResolvedValue({
+      sets: [
+        { id: 1, title: "My Biology", is_owner: true, owner_name: "Me" },
+        { id: 2, title: "Shared Math", is_owner: false, owner_name: "Alex" },
+        { id: 3, title: "Physics", is_owner: false, owner_name: "Sam" },
+        { id: 4, title: "History", is_owner: true },
+        { id: 5, title: "Extra set", is_owner: false, owner_name: "Jo" },
+      ],
+    });
+
+    renderMySets();
+
+    const recentPanel = await screen.findByRole("region", {
+      name: "Recently viewed",
+    });
+    expect(recentPanel.querySelectorAll("article")).toHaveLength(4);
+    expect(
+      screen.getByRole("link", { name: "My Biology" }).getAttribute("href")
+    ).toBe("/mysets/1");
+    expect(
+      screen.getByRole("link", { name: "Shared Math" }).getAttribute("href")
+    ).toBe("/public/2");
+    expect(recentPanel.textContent).toContain("By Alex");
+    expect(recentPanel.textContent).not.toContain("By Me");
+    expect(screen.queryByText("Extra set")).toBeNull();
+  });
+
+  test("hides the recent panel when there are no recent sets", async () => {
+    renderMySets();
+
+    await screen.findByText("Your Sets");
+
+    expect(
+      screen.queryByRole("region", { name: "Recently viewed" })
+    ).toBeNull();
+  });
+
+  test("keeps My Sets usable when loading recent sets fails", async () => {
+    listRecentSets.mockRejectedValue(new Error("Unable to load recents"));
+    listSets.mockResolvedValue([
+      {
+        id: 8,
+        title: "Current study set",
+        description: "Still available",
+        card_count: 2,
+      },
+    ]);
+
+    renderMySets();
+
+    expect(await screen.findByText("Your Sets")).toBeTruthy();
+    const currentSetLink = screen.getByRole("link", {
+      name: "Current study set",
+    });
+    expect(currentSetLink.getAttribute("href")).toBe("/mysets/8");
+    expect(
+      screen.queryByRole("region", { name: "Recently viewed" })
+    ).toBeNull();
   });
 
   test("searches the user's sets after a 300 ms debounce", async () => {
