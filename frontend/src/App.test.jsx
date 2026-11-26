@@ -63,6 +63,8 @@ describe("App routing", () => {
 
     test("protects the notes route from signed-out users", async () => {
         window.history.replaceState({}, "", "/notes");
+    test("protects the history route from signed-out users", async () => {
+        window.history.replaceState({}, "", "/history");
 
         render(<App />);
 
@@ -74,12 +76,24 @@ describe("App routing", () => {
     test("shows the notes page and navigation link for signed-in users", async () => {
         localStorage.setItem("token", "notes-token");
         window.history.replaceState({}, "", "/notes");
+    test("shows the history page and navigation link for signed-in users", async () => {
+        localStorage.setItem("token", "history-token");
+        window.history.replaceState({}, "", "/history");
         vi.stubGlobal(
             "fetch",
             vi.fn().mockResolvedValue({
                 ok: true,
                 status: 200,
                 json: async () => ({ notes: [] }),
+                json: async () => ({
+                    totals: {
+                        reviews: 0,
+                        cards_reviewed: 0,
+                        sets_studied: 0,
+                    },
+                    last_30_days: [],
+                    upcoming: { overdue: 0, days: [] },
+                }),
             })
         );
 
@@ -94,6 +108,11 @@ describe("App routing", () => {
         expect(fetch.mock.calls[0][1].headers.Authorization).toBe(
             "Bearer notes-token"
         );
+            await screen.findByRole("heading", { name: "Your History" })
+        ).toBeTruthy();
+        expect(
+            screen.getByRole("link", { name: "History" }).getAttribute("href")
+        ).toBe("/history");
     });
 
     // logout clears token and hides navigation
