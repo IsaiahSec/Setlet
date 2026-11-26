@@ -238,6 +238,10 @@ describe("note card derivation API", () => {
         expect(fetch.mock.calls[0][1].body).toBeUndefined();
         expect(fetch.mock.calls[0][1].headers.Authorization).toBe(
             "Bearer notes-token"
+        );
+    });
+});
+
 describe("review history API", () => {
     test("requests the authenticated history endpoint", async () => {
         fetch.mockResolvedValue({

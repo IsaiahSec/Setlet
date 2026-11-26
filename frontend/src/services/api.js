@@ -208,6 +208,8 @@ export function deriveCards(id) {
   return request(`/notes/${id}/derive`, {
     method: "POST",
   });
+}
+
 // Get the current user's review history and due-card statistics
 export function getHistory() {
   return request("/history");
