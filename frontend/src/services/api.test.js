@@ -9,6 +9,11 @@ import {
     reorderCards,
     listSets,
     sendFeedback,
+    listNotes,
+    getNote,
+    createNote,
+    updateNote,
+    deleteNote,
     getHistory,
     listRecentSets,
     listPublicSets,
@@ -180,6 +185,60 @@ describe("feedback API", () => {
                 }),
             })
         );
+    });
+});
+
+describe("notes API", () => {
+    test("uses the supported list, get, create, update, and delete contracts", async () => {
+        fetch
+            .mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+                json: async () => ({ notes: [] }),
+            })
+            .mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+                json: async () => ({ id: 8, title: "Study", body: "Notes" }),
+            })
+            .mockResolvedValueOnce({
+                ok: true,
+                status: 201,
+                json: async () => ({ id: 8, title: "Study", body: "Notes" }),
+            })
+            .mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+                json: async () => ({ id: 8, title: "Updated", body: "Notes" }),
+            })
+            .mockResolvedValueOnce({
+                ok: true,
+                status: 204,
+                json: async () => {
+                    throw new Error("No response body");
+                },
+            });
+
+        await listNotes();
+        await getNote(8);
+        await createNote("Study", "Notes");
+        await updateNote(8, { title: "Updated", body: "Notes" });
+        await deleteNote(8);
+
+        expect(fetch.mock.calls[0][0]).toMatch(/\/notes$/);
+        expect(fetch.mock.calls[0][1].method).toBe("GET");
+        expect(fetch.mock.calls[1][0]).toMatch(/\/notes\/8$/);
+        expect(fetch.mock.calls[1][1].method).toBe("GET");
+        expect(fetch.mock.calls[2][1]).toMatchObject({
+            method: "POST",
+            body: JSON.stringify({ title: "Study", body: "Notes" }),
+        });
+        expect(fetch.mock.calls[3][1]).toMatchObject({
+            method: "PATCH",
+            body: JSON.stringify({ title: "Updated", body: "Notes" }),
+        });
+        expect(fetch.mock.calls[4][0]).toMatch(/\/notes\/8$/);
+        expect(fetch.mock.calls[4][1].method).toBe("DELETE");
     });
 });
 

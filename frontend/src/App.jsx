@@ -18,6 +18,8 @@ import StudyReview from "./pages/StudyReview";
 import FlipThrough from "./pages/FlipThrough";
 import PublicSetView from "./pages/PublicSetView";
 import Feedback from "./pages/Feedback";
+import Notes from "./pages/Notes";
+import NoteDetail from "./pages/NoteDetail";
 import History from "./pages/History";
 
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -47,6 +49,7 @@ function Navigation({ isLoggedIn, onLogout }) {
           <Link to="/mysets">My Sets</Link>
           <Link to="/public">Public Sets</Link>
           <Link to="/feedback">Feedback</Link>
+          <Link to="/notes">Notes</Link>
           <Link to="/history">History</Link>
           <button type="button" onClick={handleLogout}>
             Log out
@@ -111,6 +114,8 @@ function App() {
           <Route path="/study/:setId" element={<StudyReview />} />
           <Route path="/flip/:setId" element={<FlipThrough />} />
           <Route path="/feedback" element={<Feedback />} />
+          <Route path="/notes" element={<Notes />} />
+          <Route path="/notes/:noteId" element={<NoteDetail />} />
           <Route path="/history" element={<History />} />
         </Route>
 

@@ -178,6 +178,39 @@ export function sendFeedback(message) {
   });
 }
 
+// List the current user's notes
+export function listNotes() {
+  return request("/notes");
+}
+
+// Get one of the current user's notes
+export function getNote(id) {
+  return request(`/notes/${id}`);
+}
+
+// Create a note for the current user
+export function createNote(title, body) {
+  return request("/notes", {
+    method: "POST",
+    body: JSON.stringify({ title, body }),
+  });
+}
+
+// Update a note owned by the current user
+export function updateNote(id, data) {
+  return request(`/notes/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
+
+// Delete a note owned by the current user
+export function deleteNote(id) {
+  return request(`/notes/${id}`, {
+    method: "DELETE",
+  });
+}
+
 // Get the current user's review history and due-card statistics
 export function getHistory() {
   return request("/history");
