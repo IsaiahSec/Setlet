@@ -179,6 +179,10 @@ describe("feedback API", () => {
                     Authorization: "Bearer feedback-token",
                 }),
             })
+        );
+    });
+});
+
 describe("review history API", () => {
     test("requests the authenticated history endpoint", async () => {
         fetch.mockResolvedValue({

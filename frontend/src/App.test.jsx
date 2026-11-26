@@ -63,8 +63,6 @@ describe("App routing", () => {
 
     test("protects the feedback route from signed-out users", async () => {
         window.history.replaceState({}, "", "/feedback");
-    test("protects the history route from signed-out users", async () => {
-        window.history.replaceState({}, "", "/history");
 
         render(<App />);
 
@@ -74,20 +72,47 @@ describe("App routing", () => {
         expect(screen.queryByRole("link", { name: "Feedback" })).toBeNull();
     });
 
+    test("protects the history route from signed-out users", async () => {
+        window.history.replaceState({}, "", "/history");
+
+        render(<App />);
+
+        await waitFor(() => {
+            expect(window.location.pathname).toBe("/login");
+        });
+    });
+
     test("shows the feedback page and navigation link for signed-in users", async () => {
         localStorage.setItem("token", "feedback-token");
         window.history.replaceState({}, "", "/feedback");
-    });
 
-    test("shows the history page and navigation link for signed-in users", async () => {
-        localStorage.setItem("token", "history-token");
-        window.history.replaceState({}, "", "/history");
         vi.stubGlobal(
             "fetch",
             vi.fn().mockResolvedValue({
                 ok: true,
                 status: 201,
                 json: async () => ({ message: "Thanks for your feedback" }),
+            })
+        );
+
+        render(<App />);
+
+        expect(
+            await screen.findByRole("heading", { name: "Send Feedback" })
+        ).toBeTruthy();
+        expect(
+            screen.getByRole("link", { name: "Feedback" }).getAttribute("href")
+        ).toBe("/feedback");
+    });
+
+    test("shows the history page and navigation link for signed-in users", async () => {
+        localStorage.setItem("token", "history-token");
+        window.history.replaceState({}, "", "/history");
+
+        vi.stubGlobal(
+            "fetch",
+            vi.fn().mockResolvedValue({
+                ok: true,
                 status: 200,
                 json: async () => ({
                     totals: {
@@ -104,11 +129,6 @@ describe("App routing", () => {
         render(<App />);
 
         expect(
-            await screen.findByRole("heading", { name: "Send Feedback" })
-        ).toBeTruthy();
-        expect(
-            screen.getByRole("link", { name: "Feedback" }).getAttribute("href")
-        ).toBe("/feedback");
             await screen.findByRole("heading", { name: "Your History" })
         ).toBeTruthy();
         expect(

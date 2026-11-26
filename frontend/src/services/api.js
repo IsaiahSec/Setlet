@@ -176,6 +176,8 @@ export function sendFeedback(message) {
     method: "POST",
     body: JSON.stringify({ message }),
   });
+}
+
 // Get the current user's review history and due-card statistics
 export function getHistory() {
   return request("/history");
