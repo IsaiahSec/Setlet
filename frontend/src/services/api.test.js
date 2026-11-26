@@ -8,6 +8,7 @@ import {
     request,
     reorderCards,
     listSets,
+    getHistory,
     listRecentSets,
     listPublicSets,
 } from "./api";
@@ -152,6 +153,23 @@ describe("study set listing API", () => {
 
         expect(fetch).toHaveBeenCalledWith(
             expect.stringMatching(/\/sets\/recent$/),
+            expect.objectContaining({ method: "GET" })
+        );
+    });
+});
+
+describe("review history API", () => {
+    test("requests the authenticated history endpoint", async () => {
+        fetch.mockResolvedValue({
+            ok: true,
+            status: 200,
+            json: async () => ({ totals: {}, last_30_days: [], upcoming: {} }),
+        });
+
+        await getHistory();
+
+        expect(fetch).toHaveBeenCalledWith(
+            expect.stringMatching(/\/history$/),
             expect.objectContaining({ method: "GET" })
         );
     });

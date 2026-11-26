@@ -1,10 +1,18 @@
 
 import { render, screen, cleanup, waitFor, fireEvent } from "@testing-library/react";
-import { afterEach, beforeEach, describe, test, expect } from "vitest";
+import {
+    afterEach,
+    beforeEach,
+    describe,
+    test,
+    expect,
+    vi,
+} from "vitest";
 import App from "./App";
 
 // clean up after each test
 afterEach(() => {
+    vi.unstubAllGlobals();
     cleanup();
     localStorage.clear();
     window.history.replaceState({}, "", "/");
@@ -51,6 +59,46 @@ describe("App routing", () => {
         await waitFor(() => {
             expect(window.location.pathname).toBe("/login");
         });
+    });
+
+    test("protects the history route from signed-out users", async () => {
+        window.history.replaceState({}, "", "/history");
+
+        render(<App />);
+
+        await waitFor(() => {
+            expect(window.location.pathname).toBe("/login");
+        });
+    });
+
+    test("shows the history page and navigation link for signed-in users", async () => {
+        localStorage.setItem("token", "history-token");
+        window.history.replaceState({}, "", "/history");
+        vi.stubGlobal(
+            "fetch",
+            vi.fn().mockResolvedValue({
+                ok: true,
+                status: 200,
+                json: async () => ({
+                    totals: {
+                        reviews: 0,
+                        cards_reviewed: 0,
+                        sets_studied: 0,
+                    },
+                    last_30_days: [],
+                    upcoming: { overdue: 0, days: [] },
+                }),
+            })
+        );
+
+        render(<App />);
+
+        expect(
+            await screen.findByRole("heading", { name: "Your History" })
+        ).toBeTruthy();
+        expect(
+            screen.getByRole("link", { name: "History" }).getAttribute("href")
+        ).toBe("/history");
     });
 
     // logout clears token and hides navigation
