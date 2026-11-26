@@ -13,6 +13,7 @@ import {
     createNote,
     updateNote,
     deleteNote,
+    listRecentSets,
     listPublicSets,
 } from "./api";
 
@@ -142,6 +143,21 @@ describe("study set listing API", () => {
 
         expect(fetch.mock.calls[1][0]).toMatch(
             /\/sets\/public\?q=Biology&page=2&page_size=10&owner_id=7&shared_from=2025-01-01&shared_to=2025-02-01$/
+        );
+    });
+
+    test("requests the current user's recent study sets", async () => {
+        fetch.mockResolvedValue({
+            ok: true,
+            status: 200,
+            json: async () => ({ sets: [] }),
+        });
+
+        await listRecentSets();
+
+        expect(fetch).toHaveBeenCalledWith(
+            expect.stringMatching(/\/sets\/recent$/),
+            expect.objectContaining({ method: "GET" })
         );
     });
 });
