@@ -154,7 +154,6 @@ describe("Note detail page", () => {
       "Body must be between 1 and 50000 characters"
     );
   });
-
   test("loads derived candidates without saving any before confirmation", async () => {
     deriveCards.mockResolvedValue({ cards: derivedCandidates });
 
