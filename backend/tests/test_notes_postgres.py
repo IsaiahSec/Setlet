@@ -208,3 +208,68 @@ def test_postgres_note_endpoints_require_authentication(pg_client, make_user):
     assert pg_client.get(f"/notes/{note_id}").status_code == 401
     assert pg_client.patch(f"/notes/{note_id}", json={"title": "No token"}).status_code == 401
     assert pg_client.delete(f"/notes/{note_id}").status_code == 401
+
+
+def test_postgres_note_derive_returns_cards_and_writes_nothing(pg_client, make_user):
+    _, headers = make_user("notes-derive@example.com", "correct horse")
+    created = create_note(
+        pg_client,
+        headers,
+        "Parser",
+        "Term: Definition\n- Bullet – Meaning\nNo separator",
+    ).json
+
+    before_sets = get_connection()
+    try:
+        with before_sets, before_sets.cursor() as cursor:
+            cursor.execute("SELECT COUNT(*) FROM study_sets")
+            set_count = cursor.fetchone()[0]
+            cursor.execute("SELECT COUNT(*) FROM cards")
+            card_count = cursor.fetchone()[0]
+    finally:
+        before_sets.close()
+
+    response = pg_client.post(f"/notes/{created['id']}/derive", headers=headers)
+
+    assert response.status_code == 200
+    assert response.json == {
+        "cards": [
+            {"front": "Term", "back": "Definition"},
+            {"front": "Bullet", "back": "Meaning"},
+        ]
+    }
+
+    after_sets = get_connection()
+    try:
+        with after_sets, after_sets.cursor() as cursor:
+            cursor.execute("SELECT COUNT(*) FROM study_sets")
+            assert cursor.fetchone()[0] == set_count
+            cursor.execute("SELECT COUNT(*) FROM cards")
+            assert cursor.fetchone()[0] == card_count
+    finally:
+        after_sets.close()
+
+
+def test_postgres_note_derive_empty_owner_mismatch_and_auth(pg_client, make_user):
+    _, owner_headers = make_user("notes-derive-owner@example.com", "correct horse")
+    _, other_headers = make_user("notes-derive-other@example.com", "correct horse")
+
+    empty = create_note(pg_client, owner_headers, "Empty", "plain text").json
+    empty_response = pg_client.post(
+        f"/notes/{empty['id']}/derive", headers=owner_headers
+    )
+    assert empty_response.status_code == 200
+    assert empty_response.json == {"cards": []}
+
+    forbidden = pg_client.post(
+        f"/notes/{empty['id']}/derive", headers=other_headers
+    )
+    assert forbidden.status_code == 404
+    assert forbidden.json == {"error": "Note not found"}
+
+    missing = pg_client.post("/notes/999999/derive", headers=owner_headers)
+    assert missing.status_code == 404
+    assert missing.json == {"error": "Note not found"}
+
+    no_token = pg_client.post(f"/notes/{empty['id']}/derive")
+    assert no_token.status_code == 401

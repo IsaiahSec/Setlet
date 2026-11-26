@@ -2,6 +2,7 @@ from flask import Blueprint, g, jsonify, request
 
 from src.routes.decorators import require_auth
 from src.services import notes
+from src.services.note_parser import parse_note
 
 notes_bp = Blueprint("notes", __name__, url_prefix="/notes")
 
@@ -51,3 +52,12 @@ def delete_note(note_id):
     if not notes.delete_note(g.user_id, note_id):
         return jsonify({"error": "Note not found"}), 404
     return "", 204
+
+
+@notes_bp.post("/<int:note_id>/derive")
+@require_auth
+def derive_note(note_id):
+    note = notes.get_note(g.user_id, note_id)
+    if note is None:
+        return jsonify({"error": "Note not found"}), 404
+    return jsonify({"cards": parse_note(note["body"])}), 200

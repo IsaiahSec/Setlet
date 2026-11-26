@@ -18,6 +18,8 @@ Set these environment variables (a local `.env` file is loaded automatically):
 - `DATABASE_URL` - PostgreSQL connection string (e.g. Render's Postgres URL)
 - `SECRET_KEY` - secret used to sign auth tokens
 - `FRONTEND_ORIGIN` - allowed frontend origin for CORS (defaults to `http://localhost:5173`; set to `https://setlet.vercel.app` in production)
+- `GITHUB_FEEDBACK_TOKEN` - token used to create feedback issues in GitHub
+- `GITHUB_REPO` - GitHub repository slug in `owner/repo` format for feedback issues
 
 ## Run (development)
 
@@ -64,6 +66,7 @@ refuse to connect unless the database name ends in `_test`.
 - `GET /notes/<id>` - fetch an authenticated user's note by id.
 - `PATCH /notes/<id>` - update `title` and/or `body` on an authenticated user's note; non-allow-listed fields are ignored.
 - `DELETE /notes/<id>` - delete an authenticated user's note.
+- `POST /notes/<id>/derive` - derive up to 200 candidate cards from an owned note using local pattern matching; this endpoint writes no cards or sets.
 - `PATCH /sets/<id>` - rename, update the description, or set visibility to `private` or `public` on an owned study set.
 - `DELETE /sets/<id>` - delete an owned study set.
 - `POST /sets/<id>/cards` - add a card to an owned set (`front` and `back`, each 1–2,000 trimmed characters).
@@ -73,6 +76,7 @@ refuse to connect unless the database name ends in `_test`.
 - `GET /sets/<id>/study` - get the caller's due and new cards, plus set-wide counts.
 - `POST /cards/<card_id>/review` - rate a visible card from 1 (Again) to 4 (Easy).
 - `GET /history` - get caller-only review totals, a zero-filled UTC daily review series for the last 30 days (including today), and overdue/upcoming due counts for the next 14 days.
+- `POST /feedback` - submit authenticated user feedback (`message`, 1-2000 trimmed chars) for GitHub issue filing, limited to one success per hour.
 
 `cards` include an internal per-set `position` used for ordering. `GET
 /sets/<id>` returns cards ordered by `position`, then `id`. New cards are
@@ -103,6 +107,13 @@ Notes are owner-scoped in SQL (`id = <note_id> AND user_id = <caller_id>`), so
 missing notes and non-owned notes both return `{"error":"Note not found"}`.
 Deleting a user cascades to that user's notes.
 
+`POST /notes/<id>/derive` requires authentication and owner access. It parses
+colon and space-padded dash separators in note lines, with support for common
+list markers, and returns `{"cards": [...]}`. It skips blank or unrecognized
+lines, duplicate pairs, empty fields, and fields outside the card limit of
+1–2,000 characters, and returns at most 200 cards. It does not save any derived
+cards or create a set.
+
 `GET /sets/public` requires authentication and returns only other users' public
 sets. Search is case-insensitive across titles and descriptions, matching all
 of up to five whitespace-separated terms. Pagination defaults to page 1 with
@@ -119,7 +130,7 @@ offset (for example, `2026-10-24T21:13:00+00:00`).
 ## Structure
 
 - `src/routes/` - Flask route/blueprint definitions (one file per resource: sets, reviews, auth, etc.)
-- `src/services/` - business logic (review validation and SM-2 scheduling)
+- `src/services/` - business logic (review validation, SM-2 scheduling, and note parsing)
 - `src/models/` - raw SQL data-access functions per table (no ORM)
 - `src/db.py` - PostgreSQL connection handling (psycopg2)
 - `tests/` - pytest test suite, mirrors the `src/` structure
