@@ -264,6 +264,9 @@ describe("Note detail page", () => {
     );
     const front = await screen.findByLabelText("Card 1 front");
     fireEvent.change(front, { target: { value: "Edited front" } });
+    fireEvent.change(screen.getByLabelText("Card 1 back"), {
+      target: { value: "Edited back" },
+    });
     fireEvent.click(screen.getByRole("button", { name: "Confirm card 1" }));
     fireEvent.click(screen.getByRole("button", { name: "Discard card 2" }));
     fireEvent.click(
@@ -274,7 +277,7 @@ describe("Note detail page", () => {
       expect(createCard).toHaveBeenCalledWith(
         "42",
         "Edited front",
-        "Cell division"
+        "Edited back"
       );
     });
     expect(createSet).toHaveBeenCalledWith("Biology", "");
@@ -415,5 +418,26 @@ describe("Note detail page", () => {
       screen.getByRole("link", { name: "My Sets" }).getAttribute("href")
     ).toBe("/mysets");
     expect(createCard).not.toHaveBeenCalled();
+  });
+
+  test("links to the selected existing set for manual card creation when no cards are found", async () => {
+    deriveCards.mockResolvedValue({ cards: [] });
+
+    renderNoteDetail();
+    await screen.findByLabelText("Title *");
+    fireEvent.click(
+      screen.getByRole("button", { name: "Create cards from this note" })
+    );
+
+    expect(
+      await screen.findByText("No cards were found in this note")
+    ).toBeTruthy();
+    fireEvent.change(screen.getByLabelText("Save cards to"), {
+      target: { value: "7" },
+    });
+
+    expect(
+      screen.getByRole("link", { name: "Existing set" }).getAttribute("href")
+    ).toBe("/mysets/7");
   });
 });
