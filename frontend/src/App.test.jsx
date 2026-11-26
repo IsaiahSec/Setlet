@@ -63,6 +63,8 @@ describe("App routing", () => {
 
     test("protects the feedback route from signed-out users", async () => {
         window.history.replaceState({}, "", "/feedback");
+    test("protects the history route from signed-out users", async () => {
+        window.history.replaceState({}, "", "/history");
 
         render(<App />);
 
@@ -75,12 +77,27 @@ describe("App routing", () => {
     test("shows the feedback page and navigation link for signed-in users", async () => {
         localStorage.setItem("token", "feedback-token");
         window.history.replaceState({}, "", "/feedback");
+    });
+
+    test("shows the history page and navigation link for signed-in users", async () => {
+        localStorage.setItem("token", "history-token");
+        window.history.replaceState({}, "", "/history");
         vi.stubGlobal(
             "fetch",
             vi.fn().mockResolvedValue({
                 ok: true,
                 status: 201,
                 json: async () => ({ message: "Thanks for your feedback" }),
+                status: 200,
+                json: async () => ({
+                    totals: {
+                        reviews: 0,
+                        cards_reviewed: 0,
+                        sets_studied: 0,
+                    },
+                    last_30_days: [],
+                    upcoming: { overdue: 0, days: [] },
+                }),
             })
         );
 
@@ -92,6 +109,11 @@ describe("App routing", () => {
         expect(
             screen.getByRole("link", { name: "Feedback" }).getAttribute("href")
         ).toBe("/feedback");
+            await screen.findByRole("heading", { name: "Your History" })
+        ).toBeTruthy();
+        expect(
+            screen.getByRole("link", { name: "History" }).getAttribute("href")
+        ).toBe("/history");
     });
 
     // logout clears token and hides navigation

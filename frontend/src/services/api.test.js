@@ -9,6 +9,7 @@ import {
     reorderCards,
     listSets,
     sendFeedback,
+    getHistory,
     listRecentSets,
     listPublicSets,
 } from "./api";
@@ -178,6 +179,19 @@ describe("feedback API", () => {
                     Authorization: "Bearer feedback-token",
                 }),
             })
+describe("review history API", () => {
+    test("requests the authenticated history endpoint", async () => {
+        fetch.mockResolvedValue({
+            ok: true,
+            status: 200,
+            json: async () => ({ totals: {}, last_30_days: [], upcoming: {} }),
+        });
+
+        await getHistory();
+
+        expect(fetch).toHaveBeenCalledWith(
+            expect.stringMatching(/\/history$/),
+            expect.objectContaining({ method: "GET" })
         );
     });
 });

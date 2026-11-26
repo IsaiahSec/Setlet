@@ -119,6 +119,8 @@
 
   .app-nav-inner {
     gap: 6px;
+  .app-nav-inner {
+    gap: 8px;
   }
 
   .app-brand {
@@ -128,6 +130,27 @@
 
   .app-brand-mark {
     width: 27px;
+    width: 28px;
+  }
+
+  .app-nav-links a,
+  .app-nav button {
+    padding: 0 6px;
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 360px) {
+  .app-nav-inner {
+    gap: 5px;
+  }
+
+  .app-brand {
+    font-size: 14px;
+  }
+
+  .app-brand-mark {
+    width: 26px;
   }
 
   .app-nav-links {
@@ -137,6 +160,7 @@
   .app-nav-links a,
   .app-nav button {
     padding: 0 6px;
+    padding: 0 4px;
     font-size: 10px;
   }
 }

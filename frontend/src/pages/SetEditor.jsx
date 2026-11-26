@@ -1,6 +1,6 @@
 
 import { useEffect, useRef, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   getSet,
   updateSet,
@@ -13,6 +13,7 @@ import "./SetEditor.css";
 
 function SetEditor() {
   const { setId } = useParams();
+  const navigate = useNavigate();
 
   const [studySet, setStudySet] = useState(null);
   const [title, setTitle] = useState("");
@@ -37,11 +38,17 @@ function SetEditor() {
     async function loadSet() {
       setLoading(true);
       setError("");
+      setStudySet(null);
 
       try {
         const data = await getSet(setId);
 
         if (!active) return;
+
+        if (data.is_owner === false) {
+          navigate(`/public/${setId}`, { replace: true });
+          return;
+        }
 
         setStudySet(data);
         setTitle(data.title || "");
@@ -62,7 +69,7 @@ function SetEditor() {
     return () => {
       active = false;
     };
-  }, [setId]);
+  }, [setId, navigate]);
 
   // Save title and description
   async function handleSaveSet(event) {
