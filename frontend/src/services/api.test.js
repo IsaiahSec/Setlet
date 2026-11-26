@@ -214,6 +214,9 @@ describe("notes API", () => {
         });
         expect(fetch.mock.calls[4][0]).toMatch(/\/notes\/8$/);
         expect(fetch.mock.calls[4][1].method).toBe("DELETE");
+    });
+});
+
 describe("review history API", () => {
     test("requests the authenticated history endpoint", async () => {
         fetch.mockResolvedValue({

@@ -201,6 +201,8 @@ export function deleteNote(id) {
   return request(`/notes/${id}`, {
     method: "DELETE",
   });
+}
+
 // Get the current user's review history and due-card statistics
 export function getHistory() {
   return request("/history");

@@ -63,6 +63,14 @@ describe("App routing", () => {
 
     test("protects the notes route from signed-out users", async () => {
         window.history.replaceState({}, "", "/notes");
+
+        render(<App />);
+
+        await waitFor(() => {
+            expect(window.location.pathname).toBe("/login");
+        });
+    });
+
     test("protects the history route from signed-out users", async () => {
         window.history.replaceState({}, "", "/history");
 
@@ -76,15 +84,38 @@ describe("App routing", () => {
     test("shows the notes page and navigation link for signed-in users", async () => {
         localStorage.setItem("token", "notes-token");
         window.history.replaceState({}, "", "/notes");
-    test("shows the history page and navigation link for signed-in users", async () => {
-        localStorage.setItem("token", "history-token");
-        window.history.replaceState({}, "", "/history");
+
         vi.stubGlobal(
             "fetch",
             vi.fn().mockResolvedValue({
                 ok: true,
                 status: 200,
                 json: async () => ({ notes: [] }),
+            })
+        );
+
+        render(<App />);
+
+        expect(
+            await screen.findByRole("heading", { name: "My Notes" })
+        ).toBeTruthy();
+        expect(
+            screen.getByRole("link", { name: "Notes" }).getAttribute("href")
+        ).toBe("/notes");
+        expect(fetch.mock.calls[0][1].headers.Authorization).toBe(
+            "Bearer notes-token"
+        );
+    });
+
+    test("shows the history page and navigation link for signed-in users", async () => {
+        localStorage.setItem("token", "history-token");
+        window.history.replaceState({}, "", "/history");
+
+        vi.stubGlobal(
+            "fetch",
+            vi.fn().mockResolvedValue({
+                ok: true,
+                status: 200,
                 json: async () => ({
                     totals: {
                         reviews: 0,
@@ -100,14 +131,6 @@ describe("App routing", () => {
         render(<App />);
 
         expect(
-            await screen.findByRole("heading", { name: "My Notes" })
-        ).toBeTruthy();
-        expect(
-            screen.getByRole("link", { name: "Notes" }).getAttribute("href")
-        ).toBe("/notes");
-        expect(fetch.mock.calls[0][1].headers.Authorization).toBe(
-            "Bearer notes-token"
-        );
             await screen.findByRole("heading", { name: "Your History" })
         ).toBeTruthy();
         expect(
