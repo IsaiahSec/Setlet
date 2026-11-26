@@ -17,6 +17,7 @@ import SetEditor from "./pages/SetEditor";
 import StudyReview from "./pages/StudyReview";
 import FlipThrough from "./pages/FlipThrough";
 import PublicSetView from "./pages/PublicSetView";
+import Feedback from "./pages/Feedback";
 import Notes from "./pages/Notes";
 import NoteDetail from "./pages/NoteDetail";
 import History from "./pages/History";
@@ -47,6 +48,7 @@ function Navigation({ isLoggedIn, onLogout }) {
         <div className="app-nav-links">
           <Link to="/mysets">My Sets</Link>
           <Link to="/public">Public Sets</Link>
+          <Link to="/feedback">Feedback</Link>
           <Link to="/notes">Notes</Link>
           <Link to="/history">History</Link>
           <button type="button" onClick={handleLogout}>
@@ -111,6 +113,7 @@ function App() {
           <Route path="/public/:setId" element={<PublicSetView />} />
           <Route path="/study/:setId" element={<StudyReview />} />
           <Route path="/flip/:setId" element={<FlipThrough />} />
+          <Route path="/feedback" element={<Feedback />} />
           <Route path="/notes" element={<Notes />} />
           <Route path="/notes/:noteId" element={<NoteDetail />} />
           <Route path="/history" element={<History />} />

@@ -113,6 +113,12 @@
 }
 
 @media (max-width: 420px) {
+  .app-nav {
+    padding: 0 10px;
+  }
+
+  .app-nav-inner {
+    gap: 6px;
   .app-nav-inner {
     gap: 8px;
   }
@@ -123,6 +129,7 @@
   }
 
   .app-brand-mark {
+    width: 27px;
     width: 28px;
   }
 
@@ -152,6 +159,7 @@
 
   .app-nav-links a,
   .app-nav button {
+    padding: 0 6px;
     padding: 0 4px;
     font-size: 10px;
   }
