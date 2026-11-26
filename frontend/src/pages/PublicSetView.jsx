@@ -1,12 +1,11 @@
 
 import { useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { getSet } from "../services/api";
 import "./MySets.css";
 
 function PublicSetView() {
   const { setId } = useParams();
-  const navigate = useNavigate();
 
   const [studySet, setStudySet] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -27,12 +26,6 @@ function PublicSetView() {
         if (!active) return;
 
         const loadedSet = data.set || data;
-
-        if (loadedSet.is_owner) {
-          navigate(`/mysets/${setId}`, { replace: true });
-          return;
-        }
-
         setStudySet(loadedSet);
       } catch (err) {
         if (!active) return;
@@ -52,7 +45,7 @@ function PublicSetView() {
     return () => {
       active = false;
     };
-  }, [setId, navigate]);
+  }, [setId]);
 
   return (
     <main className="mysets-page">
@@ -104,6 +97,14 @@ function PublicSetView() {
                 >
                   Flip through
                 </Link>
+                {studySet.is_owner === true && (
+                  <Link
+                    to={`/mysets/${setId}`}
+                    className="mysets-study-button"
+                  >
+                    Edit this set
+                  </Link>
+                )}
               </div>
             </section>
 

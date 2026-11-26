@@ -120,6 +120,7 @@ function PublicSets() {
             className="publicsets-search"
             type="search"
             value={search}
+            maxLength={100}
             onChange={(event) => {
               setPage(1);
               setSearch(event.target.value);
