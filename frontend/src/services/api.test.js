@@ -8,6 +8,7 @@ import {
     request,
     reorderCards,
     listSets,
+    deriveCards,
     sendFeedback,
     listNotes,
     getNote,
@@ -239,6 +240,30 @@ describe("notes API", () => {
         });
         expect(fetch.mock.calls[4][0]).toMatch(/\/notes\/8$/);
         expect(fetch.mock.calls[4][1].method).toBe("DELETE");
+    });
+});
+
+describe("note card derivation API", () => {
+    test("posts to the documented note derive endpoint without a request body", async () => {
+        setToken("notes-token");
+        fetch.mockResolvedValue({
+            ok: true,
+            status: 200,
+            json: async () => ({
+                cards: [{ front: "Term", back: "Definition" }],
+            }),
+        });
+
+        await deriveCards(12);
+
+        expect(fetch).toHaveBeenCalledWith(
+            expect.stringMatching(/\/notes\/12\/derive$/),
+            expect.objectContaining({ method: "POST" })
+        );
+        expect(fetch.mock.calls[0][1].body).toBeUndefined();
+        expect(fetch.mock.calls[0][1].headers.Authorization).toBe(
+            "Bearer notes-token"
+        );
     });
 });
 

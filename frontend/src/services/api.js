@@ -211,6 +211,13 @@ export function deleteNote(id) {
   });
 }
 
+// Derive candidate cards from one of the current user's notes
+export function deriveCards(id) {
+  return request(`/notes/${id}/derive`, {
+    method: "POST",
+  });
+}
+
 // Get the current user's review history and due-card statistics
 export function getHistory() {
   return request("/history");
